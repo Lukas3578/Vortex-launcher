@@ -18,13 +18,13 @@ In der installierten Windows-App gibt es links den Menüpunkt **Updates**. Dort 
 
 ## Neue Version veröffentlichen
 
-Erhöhe zunächst die Version in `package.json`, zum Beispiel von `0.4.0` auf `0.4.1`, committe die Änderungen und erstelle anschließend ein Versions-Tag:
+Erhöhe zunächst die Version in `package.json`, zum Beispiel von `0.4.1` auf `0.4.1`, committe die Änderungen und erstelle anschließend ein Versions-Tag:
 
 ```bash
 npm version patch --no-git-tag-version
 git add package.json package-lock.json src assets
-git commit -m "Release 0.4.1"
-git tag v0.4.1
+git commit -m "Release 0.4.2"
+git tag v0.4.2
 git push origin main --tags
 ```
 
