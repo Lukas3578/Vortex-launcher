@@ -2,7 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
-  searchMods: (query, version) => ipcRenderer.invoke('search-mods', query, version),
+  searchMods: (query, version, page) => ipcRenderer.invoke('search-mods', query, version, page),
+  searchResourcePacks: (query, version, page) => ipcRenderer.invoke('search-resource-packs', query, version, page),
+  downloadResourcePack: (version, pack) => ipcRenderer.invoke('download-resource-pack', version, pack),
   downloadMod: (version, mod) => ipcRenderer.invoke('download-mod', version, mod),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),

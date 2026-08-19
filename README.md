@@ -6,11 +6,13 @@ Der Vortex Client Launcher ist eine Electron-Windows-App für getrennte Fabric-I
 
 Installiere die Abhängigkeiten mit `npm ci` und starte die Anwendung mit `npm start`. Im Entwicklungsmodus ist die automatische Update-Prüfung absichtlich deaktiviert. Dadurch wird verhindert, dass eine lokale Entwicklungsversion versehentlich ein produktives Update herunterlädt.
 
-## Online-Mods
+## Online-Mods und Resource Packs
 
-Im Menü **Online-Mods** kann der Nutzer nach einem Modnamen suchen. Die Suche verwendet die öffentliche Modrinth-API und filtert die Vorschläge auf die ausgewählte Minecraft-Version und den Fabric-Loader. Für jedes Ergebnis werden die passende Mod-Version, Beschreibung, Kategorien und Downloadzahl angezeigt.
+Im Menü **Online-Mods** kann der Nutzer nach einem Modnamen suchen. Die Suche verwendet die öffentliche Modrinth-API, filtert die Vorschläge auf die ausgewählte Minecraft-Version und den Fabric-Loader und zeigt zwölf Ergebnisse pro Seite. Über **Zurück** und **Weiter** kann durch sämtliche verfügbaren Treffer geblättert werden. Für jedes Ergebnis werden die passende Mod-Version, Beschreibung, Kategorien, Icon und Downloadzahl angezeigt.
 
-Beim Herunterladen fragt der Launcher die Modrinth-Version erneut ab, überprüft die Kompatibilität, akzeptiert ausschließlich eine HTTPS-JAR-Datei, begrenzt die Dateigröße auf 100 MB und vergleicht – sofern vorhanden – die SHA-512-Prüfsumme. Die Datei wird in den `mods`-Ordner der ausgewählten Instanz geschrieben. Bereits vorhandene Dateinamen werden nicht überschrieben. Die Suche nutzt die öffentliche Modrinth-API ohne Benutzerkonto; Modrinth verlangt dafür einen eindeutig identifizierenden User-Agent.[1]
+Beim Herunterladen fragt der Launcher die Modrinth-Version erneut ab, überprüft die Kompatibilität, akzeptiert ausschließlich eine HTTPS-JAR-Datei, begrenzt die Dateigröße auf 100 MB und vergleicht – sofern vorhanden – die SHA-512-Prüfsumme. Die Datei wird in den `mods`-Ordner der ausgewählten Instanz geschrieben. Bereits vorhandene Dateinamen werden nicht überschrieben.
+
+Der eigene Bereich **Resource Packs** verwendet dieselbe mehrseitige Suche, filtert auf den Resource-Pack-Projekttyp und die gewählte Minecraft-Version und lädt kompatible ZIP-Dateien in den `resourcepacks`-Ordner. Resource Packs sind auf 500 MB begrenzt und werden ebenfalls per SHA-512 geprüft, sofern Modrinth eine Prüfsumme liefert. Die Suche nutzt die öffentliche Modrinth-API ohne Benutzerkonto; Modrinth verlangt dafür einen eindeutig identifizierenden User-Agent.[1]
 
 ## Updates für Nutzer
 

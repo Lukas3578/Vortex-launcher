@@ -25,6 +25,7 @@ const stateFile = path.join(dataRoot, 'launcher-state.json');
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
 function instanceRoot(version) { return path.join(instancesRoot, version); }
 function modsRoot(version) { return path.join(instanceRoot(version), 'mods'); }
+function resourcePacksRoot(version) { return path.join(instanceRoot(version), 'resourcepacks'); }
 function vortexConfigRoot(version) { return path.join(instanceRoot(version), 'config', 'vortexclient'); }
 function skinsRoot(version) { return path.join(vortexConfigRoot(version), 'skins'); }
 function profileFile(version) { return path.join(vortexConfigRoot(version), 'launcher-cosmetics.json'); }
@@ -37,7 +38,7 @@ function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSyn
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.3 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.4 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -45,7 +46,9 @@ async function modrinthJson(url) {
   if (!response.ok) throw new Error(`Modrinth antwortet mit ${response.status}.`);
   return response.json();
 }
-function selectPrimaryJar(files = []) { return files.find(file => file.primary && file.filename.toLowerCase().endsWith('.jar')) || files.find(file => file.filename.toLowerCase().endsWith('.jar')); }
+function selectPrimaryFile(files = [], extension) { return files.find(file => file.primary && file.filename.toLowerCase().endsWith(extension)) || files.find(file => file.filename.toLowerCase().endsWith(extension)); }
+function selectPrimaryJar(files = []) { return selectPrimaryFile(files, '.jar'); }
+function selectPrimaryZip(files = []) { return selectPrimaryFile(files, '.zip'); }
 async function getCompatibleModVersion(projectId, gameVersion) {
   const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), loaders: JSON.stringify(['fabric']), limit: '10' });
   const versions = await modrinthJson(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params}`);
@@ -56,13 +59,14 @@ async function getCompatibleModVersion(projectId, gameVersion) {
   }
   return null;
 }
-async function searchModrinth(query, gameVersion) {
+async function searchModrinth(query, gameVersion, page = 0) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   const normalizedQuery = String(query || '').trim().slice(0, 80);
+  const normalizedPage = Math.max(0, Math.min(99, Number(page) || 0));
   if (!normalizedVersion) throw new Error('Diese Minecraft-Version wird nicht unterstützt.');
-  if (normalizedQuery.length < 2) return [];
+  if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
   const facets = JSON.stringify([['project_type:mod'], [`versions:${normalizedVersion}`], ['categories:fabric']]);
-  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '8', index: 'relevance' });
+  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
   const result = await modrinthJson(`${MODRINTH_API}/search?${params}`);
   const suggestions = await Promise.all(result.hits.map(async hit => {
     try {
@@ -71,7 +75,54 @@ async function searchModrinth(query, gameVersion) {
       return { projectId: hit.project_id, slug: hit.slug, title: hit.title, description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, ...compatible };
     } catch (_) { return null; }
   }));
-  return suggestions.filter(Boolean);
+  return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
+}
+async function getCompatibleResourcePackVersion(projectId, gameVersion) {
+  const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), limit: '10' });
+  const versions = await modrinthJson(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params}`);
+  const ordered = [...versions].sort((a, b) => (a.version_type === 'release' ? 0 : 1) - (b.version_type === 'release' ? 0 : 1));
+  for (const version of ordered) {
+    const file = selectPrimaryZip(version.files);
+    if (file) return { versionId: version.id, versionNumber: version.version_number, versionType: version.version_type, fileName: file.filename, downloadUrl: file.url, size: file.size, sha512: file.hashes?.sha512 || null };
+  }
+  return null;
+}
+async function searchResourcePacks(query, gameVersion, page = 0) {
+  const normalizedVersion = validModrinthVersion(gameVersion);
+  const normalizedQuery = String(query || '').trim().slice(0, 80);
+  const normalizedPage = Math.max(0, Math.min(99, Number(page) || 0));
+  if (!normalizedVersion) throw new Error('Diese Minecraft-Version wird nicht unterstützt.');
+  if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
+  const facets = JSON.stringify([['project_type:resourcepack'], [`versions:${normalizedVersion}`]]);
+  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
+  const result = await modrinthJson(`${MODRINTH_API}/search?${params}`);
+  const suggestions = await Promise.all(result.hits.map(async hit => {
+    try {
+      const compatible = await getCompatibleResourcePackVersion(hit.project_id, normalizedVersion);
+      if (!compatible) return null;
+      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, ...compatible };
+    } catch (_) { return null; }
+  }));
+  return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
+}
+async function downloadResourcePack(gameVersion, requested = {}) {
+  const normalizedVersion = validModrinthVersion(gameVersion);
+  if (!normalizedVersion || !requested.versionId) throw new Error('Ungültige Resource-Pack- oder Minecraft-Version.');
+  const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
+  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion)) throw new Error('Dieses Resource Pack ist nicht mit der ausgewählten Minecraft-Version kompatibel.');
+  const file = selectPrimaryZip(version.files);
+  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.zip$/i.test(file.filename)) throw new Error('Resource-Pack-Datei konnte nicht sicher bestimmt werden.');
+  if (file.size > 500 * 1024 * 1024) throw new Error('Das Resource Pack ist größer als 500 MB und wurde aus Sicherheitsgründen abgelehnt.');
+  const targetDir = resourcePacksRoot(normalizedVersion); ensureDir(targetDir);
+  const target = path.join(targetDir, file.filename);
+  if (exists(target)) throw new Error(`Die Datei ${file.filename} ist bereits in dieser Instanz vorhanden.`);
+  const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(180000) });
+  if (!response.ok) throw new Error(`Der Resource-Pack-Download ist fehlgeschlagen (${response.status}).`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > 500 * 1024 * 1024) throw new Error('Das heruntergeladene Resource Pack ist größer als 500 MB.');
+  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('Die Prüfsumme des Resource Packs stimmt nicht überein.'); }
+  fs.writeFileSync(target, buffer);
+  return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
 }
 async function downloadModrinthMod(gameVersion, requested = {}) {
   const normalizedVersion = validModrinthVersion(gameVersion);
@@ -281,7 +332,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.3' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.4' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -295,8 +346,10 @@ app.whenReady().then(() => { loadAccount(); setupAutoUpdater(); createWindow(); 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-state', () => ({ account: account ? { username: account.username, uuid: account.uuid } : null, state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState }));
-ipcMain.handle('search-mods', async (_event, query, version) => { try { return { ok: true, results: await searchModrinth(query, version) }; } catch (error) { return { ok: false, results: [], error: error.message }; } });
+ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} wurde in die Minecraft-${result.version}-Instanz geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
+ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} wurde in die Resource-Packs von Minecraft ${result.version} geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('check-for-updates', () => checkForUpdates());
 ipcMain.handle('download-update', () => downloadUpdate());
 ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'Es ist kein heruntergeladenes Update vorhanden.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });
