@@ -2,6 +2,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
+  openLaunchLog: () => ipcRenderer.invoke('open-launch-log'),
+  openCrashLog: () => ipcRenderer.invoke('open-crash-log'),
+  getWebsiteCapeCatalogue: () => ipcRenderer.invoke('get-website-cape-catalogue'),
+  selectWebsiteCape: (capeId) => ipcRenderer.invoke('select-website-cape', capeId),
   getCommunityState: () => ipcRenderer.invoke('community-get-state'),
   openCommunityLogin: () => ipcRenderer.invoke('community-login'),
   listCommunityPresets: () => ipcRenderer.invoke('community-list-presets'),

@@ -36,14 +36,24 @@ function profileFile(version) { return path.join(vortexConfigRoot(version), 'lau
 function sanitizeVersion(version) { return SUPPORTED_VERSIONS.includes(version) ? version : null; }
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
 function exists(file) { return fs.existsSync(file); }
-function send(channel, payload) { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload); }
+function launchLogPath() { return path.join(dataRoot, 'launch.log'); }
+function crashLogPath() { return path.join(dataRoot, 'crash.log'); }
+function appendPersistentLog(file, message) { try { ensureDir(dataRoot); const line = `[${new Date().toISOString()}] ${String(message).replace(/[\r\n]+/g, ' ').slice(0, 4000)}\n`; fs.appendFileSync(file, line, 'utf8'); if (fs.statSync(file).size > 2 * 1024 * 1024) { const recent = fs.readFileSync(file).subarray(-1024 * 1024); fs.writeFileSync(file, recent); } } catch (_) {} }
+function send(channel, payload) { if (channel === 'log') appendPersistentLog(launchLogPath(), payload); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload); }
 function loadJson(file, fallback) { try { return exists(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; } catch (_) { return fallback; } }
 function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8'); }
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
+function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choice.json'); }
+function websiteCapeConfigPath(version) { return path.join(instanceRoot(version), 'config', 'vortex-client', 'cosmetics.json'); }
+function isVortexCosmeticUrl(value) { try { const url = new URL(String(value || '')); return url.protocol === 'https:' && ['vortexclient.at', 'vortex-client.onrender.com'].includes(url.hostname) && /^\/cosmetics\//.test(url.pathname); } catch (_) { return false; } }
+function normalizeCapeCatalogue(data) { const seen = new Set(); return (Array.isArray(data?.capes) ? data.capes : []).map(entry => ({ id: String(entry?.id || ''), name: String(entry?.name || '').trim().slice(0, 60), texture: String(entry?.texture || ''), preview: String(entry?.preview || '') })).filter(entry => /^[a-z0-9_-]{1,48}$/i.test(entry.id) && entry.name && isVortexCosmeticUrl(entry.texture) && isVortexCosmeticUrl(entry.preview) && !seen.has(entry.id) && Boolean(seen.add(entry.id))).slice(0, 60); }
+async function loadWebsiteCapeCatalogue() { const response = await fetch(COSMETICS_CATALOGUE_URL, { headers: { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Cape-Katalog antwortet mit ${response.status}.`); return normalizeCapeCatalogue(await response.json()); }
+function applyWebsiteCapeChoice(version) { const choice = loadJson(websiteCapeChoiceFile(), null); if (!choice || (choice.cape !== null && !/^[a-z0-9_-]{1,48}$/i.test(choice.cape))) return; try { const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.6.0 (github.com/Lukas3578/Vortex-launcher)';
+const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.7.0 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -418,6 +428,7 @@ function maintainBundledMods(version) {
   ensureDir(mods);
   const removedVoice = removeVoiceChat(mods);
   const replaced = cleanReplacedVortexJars(normalized, mods);
+  applyWebsiteCapeChoice(normalized);
   let installed = 0;
   const bundleDir = path.join(assetsRoot(), 'modpacks', normalized);
   for (const name of bundledModFiles(normalized)) {
@@ -646,7 +657,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.6.0' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.7.0' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -658,6 +669,8 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 }
 
+process.on('uncaughtException', error => { appendPersistentLog(crashLogPath(), `uncaughtException: ${error?.stack || error}`); appendPersistentLog(launchLogPath(), `ERROR uncaughtException: ${error?.message || error}`); });
+process.on('unhandledRejection', reason => { appendPersistentLog(crashLogPath(), `unhandledRejection: ${reason?.stack || reason}`); appendPersistentLog(launchLogPath(), `ERROR unhandledRejection: ${reason?.message || reason}`); });
 app.whenReady().then(() => {
   loadAccount();
   setupAutoUpdater();
@@ -669,6 +682,10 @@ app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instan
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, community: await getCommunityState() }));
+ipcMain.handle('open-launch-log', () => { if (!exists(launchLogPath())) return { ok: false, error: 'Es wurde noch kein Launcher-Protokoll erstellt.' }; shell.showItemInFolder(launchLogPath()); return { ok: true }; });
+ipcMain.handle('open-crash-log', () => { if (!exists(crashLogPath())) return { ok: false, error: 'Es wurde noch kein Fehlerprotokoll erstellt.' }; shell.showItemInFolder(crashLogPath()); return { ok: true }; });
+ipcMain.handle('get-website-cape-catalogue', async () => { try { return { ok: true, capes: await loadWebsiteCapeCatalogue(), choice: loadJson(websiteCapeChoiceFile(), { cape: null }) }; } catch (error) { return { ok: false, capes: [], choice: loadJson(websiteCapeChoiceFile(), { cape: null }), error: error.message }; } });
+ipcMain.handle('select-website-cape', async (_event, capeId) => { try { const normalizedId = capeId === null || capeId === '' ? null : String(capeId); const capes = await loadWebsiteCapeCatalogue(); if (normalizedId !== null && !capes.some(cape => cape.id === normalizedId)) throw new Error('Dieses Cape ist nicht im offiziellen Vortex-Katalog vorhanden.'); const choice = { cape: normalizedId, updatedAt: new Date().toISOString() }; writeJson(websiteCapeChoiceFile(), choice); let written = 0; for (const version of SUPPORTED_VERSIONS) { if (!exists(instanceRoot(version))) continue; applyWebsiteCapeChoice(version); written += 1; } send('log', normalizedId ? `Website-Cape ausgewählt: ${normalizedId}.` : 'Website-Cape entfernt.'); return { ok: true, choice, written }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-get-state', () => getCommunityState());
 ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });
