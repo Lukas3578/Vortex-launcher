@@ -1,0 +1,26 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('vortex', {
+  getState: () => ipcRenderer.invoke('get-state'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
+  selectVersion: (version) => ipcRenderer.invoke('select-version', version),
+  prepareInstance: (version) => ipcRenderer.invoke('prepare-instance', version),
+  getInstanceSummary: (version) => ipcRenderer.invoke('get-instance-summary', version),
+  openModsFolder: (version) => ipcRenderer.invoke('open-mods-folder', version),
+  openInstanceFolder: (version) => ipcRenderer.invoke('open-instance-folder', version),
+  openSkinsFolder: (version) => ipcRenderer.invoke('open-skins-folder', version),
+  openCosmeticsProfile: (version) => ipcRenderer.invoke('open-cosmetics-profile', version),
+  listMods: (version) => ipcRenderer.invoke('list-mods', version),
+  setCosmetics: (cosmetics) => ipcRenderer.invoke('set-cosmetics', cosmetics),
+  importCosmeticSkin: (version, cosmetics) => ipcRenderer.invoke('import-cosmetic-skin', version, cosmetics),
+  showCosmeticsInfo: () => ipcRenderer.invoke('show-cosmetics-info'),
+  login: () => ipcRenderer.invoke('login'),
+  logout: () => ipcRenderer.invoke('logout'),
+  launch: (version) => ipcRenderer.invoke('launch', version),
+  onStatus: (callback) => ipcRenderer.on('status', (_event, value) => callback(value)),
+  onLog: (callback) => ipcRenderer.on('log', (_event, value) => callback(value)),
+  onProgress: (callback) => ipcRenderer.on('progress', (_event, value) => callback(value)),
+  onUpdateState: (callback) => ipcRenderer.on('update-state', (_event, value) => callback(value))
+});

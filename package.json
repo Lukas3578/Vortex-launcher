@@ -1,0 +1,45 @@
+{
+  "name": "vortex-client-launcher",
+  "version": "0.3.0",
+  "description": "Vortex Client Launcher mit isolierten Fabric-Instanzen und Cosmetics-Workshop",
+  "main": "src/main.js",
+  "author": "Vortex Client",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "minecraft-launcher-core": "^3.18.2",
+    "msmc": "^5.0.5",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.vortexclient.launcher",
+    "productName": "Vortex Client",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "Lukas3578",
+      "repo": "Vortex-launcher",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  }
+}
