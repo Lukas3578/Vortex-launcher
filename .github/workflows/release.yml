@@ -25,6 +25,13 @@ jobs:
       - name: Abhängigkeiten installieren
         run: npm ci
 
+      - name: GitHub Release vorbereiten
+        shell: bash
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --target "$GITHUB_SHA" --title "Vortex Client $GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Windows-Installer bauen und GitHub Release veröffentlichen
         run: npm run dist -- --publish always
         env:
