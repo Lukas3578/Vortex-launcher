@@ -15,6 +15,7 @@ const EMBLEMS = ['none', 'vortex-crest', 'nebula-mark', 'void-rune'];
 let mainWindow;
 let minecraftProcess;
 let account = null;
+let accounts = [];
 let updateState = { status: 'idle', currentVersion: app.getVersion(), availableVersion: null, progress: 0, error: null };
 let instanceMaintenanceTimer = null;
 let instanceMaintenanceRunning = false;
@@ -42,7 +43,7 @@ function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileS
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.5.0 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.6.0 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -325,8 +326,47 @@ async function downloadUpdate() {
   catch (error) { return setUpdateState({ status: 'error', error: error.message || String(error) }); }
 }
 
-function loadAccount() { account = loadJson(accountFile, null); }
-function saveAccount(value) { account = value; writeJson(accountFile, value); }
+function accountId(value = {}) { const uuid = String(value.uuid || '').trim().toLowerCase(); return uuid || `name:${String(value.username || '').trim().toLowerCase()}`; }
+function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft-Spieler'), uuid: String(value?.uuid || '') }; }
+function saveAccounts() { const activeAccountId = account ? accountId(account) : null; writeJson(accountFile, { schemaVersion: 2, activeAccountId, accounts }); }
+function loadAccount() {
+  const stored = loadJson(accountFile, null);
+  if (stored && Array.isArray(stored.accounts)) {
+    const unique = new Map();
+    for (const entry of stored.accounts) if (entry && typeof entry === 'object' && entry.auth) unique.set(accountId(entry), entry);
+    accounts = [...unique.values()];
+    account = accounts.find(entry => accountId(entry) === stored.activeAccountId) || accounts[0] || null;
+    if (accountId(account || {}) !== String(stored.activeAccountId || '')) saveAccounts();
+    return;
+  }
+  accounts = stored && typeof stored === 'object' && stored.auth ? [stored] : [];
+  account = accounts[0] || null;
+  if (stored) saveAccounts();
+}
+function saveAccount(value) {
+  const id = accountId(value);
+  accounts = [value, ...accounts.filter(entry => accountId(entry) !== id)];
+  account = value;
+  saveAccounts();
+  return account;
+}
+function selectAccount(id) {
+  const selected = accounts.find(entry => accountId(entry) === String(id || ''));
+  if (!selected) return null;
+  account = selected;
+  saveAccounts();
+  return account;
+}
+function removeAccount(id) {
+  const targetId = String(id || '');
+  const removed = accounts.find(entry => accountId(entry) === targetId);
+  if (!removed) return null;
+  accounts = accounts.filter(entry => accountId(entry) !== targetId);
+  if (account && accountId(account) === targetId) account = accounts[0] || null;
+  saveAccounts();
+  return removed;
+}
+function accountSummaries() { return accounts.map(accountSummary); }
 function loadState() {
   const legacy = loadJson(stateFile, {});
   return {
@@ -606,7 +646,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.5.0' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.6.0' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -628,7 +668,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? { username: account.username, uuid: account.uuid } : null, state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, community: await getCommunityState() }));
 ipcMain.handle('community-get-state', () => getCommunityState());
 ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });
@@ -700,11 +740,13 @@ ipcMain.handle('login', async () => {
     const token = await xboxManager.getMinecraft();
     const profile = token.profile || {};
     saveAccount({ username: profile.name || 'Minecraft-Spieler', uuid: profile.id || '', auth: token.mclc() });
-    send('status', { type: 'success', message: `Angemeldet als ${account.username}` });
-    return { ok: true, account: { username: account.username, uuid: account.uuid } };
+    send('status', { type: 'success', message: `Angemeldet als ${account.username}. ${accounts.length} Konto/Konten gespeichert.` });
+    return { ok: true, account: accountSummary(account), accounts: accountSummaries() };
   } catch (error) { send('status', { type: 'error', message: `Anmeldung fehlgeschlagen: ${error.message}` }); return { ok: false, error: error.message }; }
 });
-ipcMain.handle('logout', () => { account = null; try { fs.unlinkSync(accountFile); } catch (_) {} return { ok: true }; });
+ipcMain.handle('select-account', (_event, id) => { const selected = selectAccount(id); if (!selected) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'success', message: `Aktives Konto: ${selected.username}` }); return { ok: true, account: accountSummary(selected), accounts: accountSummaries() }; });
+ipcMain.handle('remove-account', (_event, id) => { const removed = removeAccount(id); if (!removed) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'info', message: `${removed.username} wurde aus dem Launcher entfernt.` }); return { ok: true, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
+ipcMain.handle('logout', () => { if (!account) return { ok: true, account: null, accounts: accountSummaries() }; const removed = removeAccount(accountId(account)); return { ok: true, removed: removed ? accountSummary(removed) : null, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
 ipcMain.handle('launch', async (_event, requestedVersion) => {
   const version = sanitizeVersion(requestedVersion || loadState().selectedVersion);
   if (!account?.auth) return { ok: false, error: 'Bitte melde zuerst dein Minecraft-Microsoft-Konto an.' };

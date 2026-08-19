@@ -33,6 +33,8 @@ contextBridge.exposeInMainWorld('vortex', {
   importCosmeticSkinByUsername: (version, username, cosmetics) => ipcRenderer.invoke('import-cosmetic-skin-by-username', version, username, cosmetics),
   showCosmeticsInfo: () => ipcRenderer.invoke('show-cosmetics-info'),
   login: () => ipcRenderer.invoke('login'),
+  selectAccount: (id) => ipcRenderer.invoke('select-account', id),
+  removeAccount: (id) => ipcRenderer.invoke('remove-account', id),
   logout: () => ipcRenderer.invoke('logout'),
   launch: (version) => ipcRenderer.invoke('launch', version),
   onStatus: (callback) => ipcRenderer.on('status', (_event, value) => callback(value)),
