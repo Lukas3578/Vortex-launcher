@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('vortex', {
   openSkinsFolder: (version) => ipcRenderer.invoke('open-skins-folder', version),
   openCosmeticsProfile: (version) => ipcRenderer.invoke('open-cosmetics-profile', version),
   listMods: (version) => ipcRenderer.invoke('list-mods', version),
+  removeMod: (version, fileName) => ipcRenderer.invoke('remove-mod', version, fileName),
   setCosmetics: (cosmetics) => ipcRenderer.invoke('set-cosmetics', cosmetics),
   importCosmeticSkin: (version, cosmetics) => ipcRenderer.invoke('import-cosmetic-skin', version, cosmetics),
   showCosmeticsInfo: () => ipcRenderer.invoke('show-cosmetics-info'),
