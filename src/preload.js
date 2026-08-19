@@ -2,9 +2,16 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
+  getCommunityState: () => ipcRenderer.invoke('community-get-state'),
+  openCommunityLogin: () => ipcRenderer.invoke('community-login'),
+  listCommunityPresets: () => ipcRenderer.invoke('community-list-presets'),
+  downloadCommunityPreset: (shareCode, filename) => ipcRenderer.invoke('community-download-preset', shareCode, filename),
+  uploadCommunityPreset: (metadata) => ipcRenderer.invoke('community-upload-preset', metadata),
   searchMods: (query, version, page) => ipcRenderer.invoke('search-mods', query, version, page),
   searchResourcePacks: (query, version, page) => ipcRenderer.invoke('search-resource-packs', query, version, page),
   downloadResourcePack: (version, pack) => ipcRenderer.invoke('download-resource-pack', version, pack),
+  listResourcePacks: (version) => ipcRenderer.invoke('list-resource-packs', version),
+  removeResourcePack: (version, fileName) => ipcRenderer.invoke('remove-resource-pack', version, fileName),
   downloadMod: (version, mod) => ipcRenderer.invoke('download-mod', version, mod),
   installModProject: (projectId, version) => ipcRenderer.invoke('install-mod-project', projectId, version),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
@@ -21,7 +28,9 @@ contextBridge.exposeInMainWorld('vortex', {
   removeMod: (version, fileName) => ipcRenderer.invoke('remove-mod', version, fileName),
   toggleMod: (version, fileName) => ipcRenderer.invoke('toggle-mod', version, fileName),
   setCosmetics: (cosmetics) => ipcRenderer.invoke('set-cosmetics', cosmetics),
+  getCosmeticSkinPreview: (version) => ipcRenderer.invoke('get-cosmetic-skin-preview', version),
   importCosmeticSkin: (version, cosmetics) => ipcRenderer.invoke('import-cosmetic-skin', version, cosmetics),
+  importCosmeticSkinByUsername: (version, username, cosmetics) => ipcRenderer.invoke('import-cosmetic-skin-by-username', version, username, cosmetics),
   showCosmeticsInfo: () => ipcRenderer.invoke('show-cosmetics-info'),
   login: () => ipcRenderer.invoke('login'),
   logout: () => ipcRenderer.invoke('logout'),
@@ -29,5 +38,7 @@ contextBridge.exposeInMainWorld('vortex', {
   onStatus: (callback) => ipcRenderer.on('status', (_event, value) => callback(value)),
   onLog: (callback) => ipcRenderer.on('log', (_event, value) => callback(value)),
   onProgress: (callback) => ipcRenderer.on('progress', (_event, value) => callback(value)),
+  onInstanceMaintenance: (callback) => ipcRenderer.on('instance-maintenance', (_event, value) => callback(value)),
+  onCommunityState: (callback) => ipcRenderer.on('community-state', (_event, value) => callback(value)),
   onUpdateState: (callback) => ipcRenderer.on('update-state', (_event, value) => callback(value))
 });
