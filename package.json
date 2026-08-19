@@ -1,6 +1,6 @@
 {
   "name": "vortex-client-launcher",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Vortex Client Launcher mit isolierten Fabric-Instanzen und Cosmetics-Workshop",
   "main": "src/main.js",
   "author": "Vortex Client",
@@ -40,6 +40,22 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "language": "1031",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeader": "build/installer-header.bmp",
+      "installerSidebar": "build/installer-sidebar.bmp",
+      "uninstallerSidebar": "build/installer-sidebar.bmp",
+      "include": "build/installer.nsh",
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vortex Client"
     }
   }
 }
