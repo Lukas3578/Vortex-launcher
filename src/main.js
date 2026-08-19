@@ -37,7 +37,7 @@ function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSyn
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.2 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.3 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -147,7 +147,9 @@ function bundledModFiles(version) {
   const dir = path.join(assetsRoot(), 'modpacks', version);
   return exists(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.jar') && !/voice.?chat/i.test(name)) : [];
 }
+function isProtectedCosmeticsMod(name) { return /^vortexclient.*\.jar$/i.test(name); }
 function mandatoryModNames(version) { return new Set(bundledModFiles(version)); }
+function protectedModNames(version) { return new Set(bundledModFiles(version).filter(isProtectedCosmeticsMod)); }
 function cosmeticFiles(version) {
   const dir = skinsRoot(version);
   if (!exists(dir)) return [];
@@ -171,7 +173,9 @@ function getInstanceSummary(version) {
     totalModCount: present.length,
     customModCount: present.filter(name => !required.has(name)).length,
     fabricInstalled: exists(path.join(root, 'versions')),
-    cosmeticsSupported: version === COSMETICS_MOD_VERSION,
+    cosmeticsSupported: protectedModNames(version).size > 0,
+    cosmeticsModPresent: [...protectedModNames(version)].some(name => exists(path.join(mods, name))),
+    cosmeticsModNames: [...protectedModNames(version)],
     cosmeticSkinCount: cosmeticFiles(version).length,
     cosmeticProfile: version === COSMETICS_MOD_VERSION ? loadCosmeticProfile(version) : null
   };
@@ -224,6 +228,8 @@ async function ensureInstance(version) {
   const bundleDir = path.join(assetsRoot(), 'modpacks', normalized);
   for (const name of bundledModFiles(normalized)) if (copyIfChanged(path.join(bundleDir, name), path.join(mods, name))) installed += 1;
   const cosmeticState = loadState();
+  const protectedCosmetics = [...protectedModNames(normalized)];
+  if (protectedCosmetics.length) send('log', `Vortex Cosmetics-Core geschützt: ${protectedCosmetics.join(', ')}`);
   writeJson(path.join(vortexConfigRoot(normalized), 'launcher-profile.json'), {
     launcher: 'Vortex Client Launcher',
     version: normalized,
@@ -275,7 +281,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.2' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.3' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -301,7 +307,7 @@ ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = san
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics-Skins sind nur für 1.21.11 verfügbar.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Kein Cosmetics-Profil für diese Version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
-ipcMain.handle('list-mods', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.endsWith('.jar')).sort().map(name => ({ name, required: required.has(name) })); });
+ipcMain.handle('list-mods', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.endsWith('.jar')).sort().map(name => ({ name, required: required.has(name), protected: cosmetics.has(name), role: cosmetics.has(name) ? 'Vortex Cosmetics-Core · wird automatisch geschützt' : required.has(name) ? 'Vortex-Pflichtmod' : 'Eigener Mod' })); });
 ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const state = loadState();
   const hat = cosmetics.hat ?? state.hat;
