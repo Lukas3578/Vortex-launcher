@@ -41,3 +41,11 @@ Die Anwendung ist bereits auf das Repository `Lukas3578/Vortex-launcher` als Upd
 ## Lokaler Build
 
 `npm run dist` erzeugt den Windows-Installer. Ein Windows-Rechner oder ein Windows-CI-Runner ist erforderlich, um den NSIS-Installer vollständig zu erstellen. Das Repository enthält deshalb den GitHub-Workflow unter `.github/workflows/release.yml`.
+
+## Integrierter Mod-Installer
+
+Der Menüpunkt **Mod-Installer** verbindet die Modrinth-Suche mit der Instanzverwaltung des Launchers. Er zeigt nur passende Fabric-Projekte für die gewählte Minecraft-Version an und installiert eine gewählte Mod direkt in den zugehörigen `mods`-Ordner.
+
+Bei der Installation bevorzugt der Launcher stabile Releases und löst erforderliche Modrinth-Abhängigkeiten automatisch auf. Jede JAR wird ausschließlich per HTTPS geladen, ist auf 100 MB begrenzt und wird mit der SHA-512-Prüfsumme abgeglichen, sofern sie von Modrinth bereitgestellt wird. Bereits bekannte Projekte werden pro Instanz gespeichert und in der Suche als installiert markiert.
+
+In der **Mod-Bibliothek** können eigene Mods über den Schalter temporär deaktiviert werden. Sie werden dafür in `.jar.disabled` umbenannt und bleiben auf dem Computer erhalten. Geschützte Vortex-Pflichtmods und der Cosmetics-Core lassen sich weder deaktivieren noch löschen.

@@ -38,7 +38,7 @@ function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSyn
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.6 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.7 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -50,14 +50,66 @@ function selectPrimaryFile(files = [], extension) { return files.find(file => fi
 function selectPrimaryJar(files = []) { return selectPrimaryFile(files, '.jar'); }
 function selectPrimaryZip(files = []) { return selectPrimaryFile(files, '.zip'); }
 async function getCompatibleModVersion(projectId, gameVersion) {
-  const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), loaders: JSON.stringify(['fabric']), limit: '10' });
+  const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), loaders: JSON.stringify(['fabric']), limit: '20' });
   const versions = await modrinthJson(`${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params}`);
-  const ordered = [...versions].sort((a, b) => (a.version_type === 'release' ? 0 : 1) - (b.version_type === 'release' ? 0 : 1));
-  for (const version of ordered) {
-    const file = selectPrimaryJar(version.files);
-    if (file) return { versionId: version.id, versionNumber: version.version_number, versionType: version.version_type, fileName: file.filename, downloadUrl: file.url, size: file.size, sha512: file.hashes?.sha512 || null };
+  const selected = selectCompatibleModVersion(versions, gameVersion);
+  if (!selected) return null;
+  const file = selectPrimaryJar(selected.files);
+  return { versionId: selected.id, versionNumber: selected.version_number, versionType: selected.version_type, fileName: file.filename, downloadUrl: file.url, size: file.size, sha512: file.hashes?.sha512 || null };
+}
+const MODRINTH_UNUSABLE_STATUSES = new Set(['archived', 'draft', 'scheduled', 'unknown']);
+const MODRINTH_CHANNELS = ['release', 'beta', 'alpha'];
+function installedProjectsFile(version) { return path.join(instanceRoot(version), 'vortex-installed-projects.json'); }
+function installedProjectMap(version) { return loadJson(installedProjectsFile(version), {}); }
+function selectCompatibleModVersion(versions, gameVersion) {
+  const usable = (versions || []).filter(entry => Array.isArray(entry.game_versions) && entry.game_versions.includes(gameVersion) && Array.isArray(entry.loaders) && entry.loaders.includes('fabric') && !MODRINTH_UNUSABLE_STATUSES.has(entry.status) && selectPrimaryJar(entry.files));
+  for (const channel of MODRINTH_CHANNELS) {
+    const candidates = usable.filter(entry => entry.version_type === channel);
+    if (candidates.length) return candidates.reduce((latest, entry) => new Date(entry.date_published || 0) > new Date(latest.date_published || 0) ? entry : latest);
   }
-  return null;
+  return usable[0] || null;
+}
+async function resolveModInstall(projectId, gameVersion) {
+  const selected = new Map(); const queued = [String(projectId)]; const visited = new Set(); const missing = []; const conflicts = [];
+  while (queued.length) {
+    const next = queued.shift(); if (visited.has(next)) continue; visited.add(next);
+    try {
+      const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), loaders: JSON.stringify(['fabric']), limit: '20' });
+      const versions = await modrinthJson(`${MODRINTH_API}/project/${encodeURIComponent(next)}/version?${params}`);
+      const version = selectCompatibleModVersion(versions, gameVersion);
+      if (!version) { missing.push(next); continue; }
+      selected.set(next, version);
+      for (const dependency of version.dependencies || []) {
+        if (dependency.dependency_type === 'required' && dependency.project_id) queued.push(dependency.project_id);
+        if (dependency.dependency_type === 'incompatible' && dependency.project_id) conflicts.push(dependency.project_id);
+      }
+    } catch (_) { missing.push(next); }
+  }
+  return { versions: [...selected.entries()].map(([projectId, version]) => ({ projectId, version })), missing, conflicts };
+}
+async function installModrinthProject(projectId, gameVersion) {
+  const normalizedVersion = validModrinthVersion(gameVersion);
+  if (!normalizedVersion || !projectId) throw new Error('Ungültige Mod- oder Minecraft-Version.');
+  const plan = await resolveModInstall(projectId, normalizedVersion);
+  if (!plan.versions.length) throw new Error(`Für Minecraft ${normalizedVersion} wurde keine passende Fabric-Version gefunden.`);
+  const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
+  const projects = installedProjectMap(normalizedVersion); const installed = []; const present = [];
+  for (const entry of plan.versions) {
+    const file = selectPrimaryJar(entry.version.files);
+    if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) { plan.missing.push(entry.projectId); continue; }
+    if (file.size > 100 * 1024 * 1024) { plan.missing.push(entry.projectId); continue; }
+    const target = path.join(targetDir, file.filename);
+    if (exists(target)) { present.push(file.filename); projects[entry.projectId] = file.filename; continue; }
+    const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) });
+    if (!response.ok) { plan.missing.push(entry.projectId); continue; }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > 100 * 1024 * 1024) { plan.missing.push(entry.projectId); continue; }
+    if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) { plan.missing.push(entry.projectId); continue; } }
+    fs.writeFileSync(target, buffer); projects[entry.projectId] = file.filename; installed.push(file.filename);
+  }
+  writeJson(installedProjectsFile(normalizedVersion), projects);
+  if (!installed.length && !present.length) throw new Error('Keine Mod-Datei konnte installiert werden.');
+  return { ok: true, version: normalizedVersion, installed, present, missing: [...new Set(plan.missing)], conflicts: [...new Set(plan.conflicts)] };
 }
 async function searchModrinth(query, gameVersion, page = 0) {
   const normalizedVersion = validModrinthVersion(gameVersion);
@@ -72,7 +124,7 @@ async function searchModrinth(query, gameVersion, page = 0) {
     try {
       const compatible = await getCompatibleModVersion(hit.project_id, normalizedVersion);
       if (!compatible) return null;
-      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, ...compatible };
+      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, author: hit.author || '', description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, installed: Boolean(installedProjectMap(normalizedVersion)[hit.project_id]), ...compatible };
     } catch (_) { return null; }
   }));
   return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
@@ -367,7 +419,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.6' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.7' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -385,6 +437,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 ipcMain.handle('get-state', () => ({ account: account ? { username: account.username, uuid: account.uuid } : null, state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState }));
 ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} wurde in die Minecraft-${result.version}-Instanz geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} Mod-Datei(en) für Minecraft ${result.version} bereitgestellt.` }); if (result.conflicts.length) send('log', `Hinweis: mögliche inkompatible Modrinth-Projekte: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Ohne passende Version übersprungen: ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} wurde in die Resource-Packs von Minecraft ${result.version} geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('check-for-updates', () => checkForUpdates());
@@ -397,8 +450,9 @@ ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = san
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics-Skins sind nur für 1.21.11 verfügbar.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Kein Cosmetics-Profil für diese Version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
-ipcMain.handle('list-mods', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.endsWith('.jar')).sort().map(name => ({ name, required: required.has(name), protected: cosmetics.has(name), role: cosmetics.has(name) ? 'Vortex Cosmetics-Core · wird automatisch geschützt' : required.has(name) ? 'Vortex-Pflichtmod' : 'Eigener Mod' })); });
-ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.jar$/i.test(safeName)) return { ok: false, error: 'Ungültige Mod-Datei.' }; if (mandatoryModNames(normalized).has(safeName) || protectedModNames(normalized).has(safeName)) return { ok: false, error: 'Diese Vortex-Pflichtmod ist geschützt und kann nicht entfernt werden.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'Die Mod-Datei wurde nicht gefunden.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} wurde aus Minecraft ${normalized} entfernt.` }); return { ok: true, fileName: safeName, version: normalized }; });
+ipcMain.handle('list-mods', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort().map(file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), role: cosmetics.has(name) ? 'Vortex Cosmetics-Core · wird automatisch geschützt' : required.has(name) ? 'Vortex-Pflichtmod' : enabled ? 'Eigener Mod · aktiv' : 'Eigener Mod · deaktiviert' }; }); });
+ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Ungültige Mod-Datei.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'Diese Vortex-Pflichtmod ist geschützt und kann nicht entfernt werden.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'Die Mod-Datei wurde nicht gefunden.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${baseName} wurde aus Minecraft ${normalized} entfernt.` }); return { ok: true, fileName: baseName, version: normalized }; });
+ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Ungültige Mod-Datei.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'Diese Vortex-Pflichtmod ist geschützt und kann nicht deaktiviert werden.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'Die Mod-Datei wurde nicht gefunden.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'Die Ziel-Datei existiert bereits.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });
 ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const state = loadState();
   const hat = cosmetics.hat ?? state.hat;
