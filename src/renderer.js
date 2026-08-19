@@ -4,6 +4,7 @@ let launcherState = null;
 let selectedVersion = '1.21.11';
 let selectedHat = 'vortex-cap';
 let selectedEmblem = 'vortex-crest';
+let onlineModResults = [];
 
 const hatNames = { none: 'Kein Hut', 'vortex-cap': 'Vortex Cap', 'neon-halo': 'Neon Halo', 'void-crown': 'Void Crown', 'cyber-headphones': 'Cyber Headphones', 'slime-antenna': 'Slime Antenna' };
 const emblemNames = { none: 'Kein Emblem', 'vortex-crest': 'Vortex Crest', 'nebula-mark': 'Nebula Mark', 'void-rune': 'Void Rune' };
@@ -61,7 +62,7 @@ function updateCosmetics() {
 function updateUpdateView(update = launcherState?.update || {}) {
   const labels = { idle: 'Bereit', checking: 'Suche läuft …', available: 'Update verfügbar', downloading: 'Download läuft …', downloaded: 'Bereit zur Installation', 'up-to-date': 'Aktuell', dev: 'Entwicklermodus', error: 'Fehler' };
   const messages = { idle: 'Noch nicht auf Updates geprüft.', checking: 'Die GitHub-Releases werden geprüft …', available: `Version ${update.availableVersion} ist verfügbar.`, downloading: `Update wird heruntergeladen: ${update.progress || 0} %`, downloaded: `Version ${update.availableVersion} wurde heruntergeladen und kann installiert werden.`, 'up-to-date': 'Du verwendest bereits die neueste Version.', dev: update.error || 'Updates sind im Entwicklungsmodus deaktiviert.', error: update.error || 'Die Update-Prüfung ist fehlgeschlagen.' };
-  $('currentVersion').textContent = update.currentVersion || '0.3.0'; $('updateBadge').textContent = labels[update.status] || 'Bereit'; $('updateStatus').textContent = messages[update.status] || messages.idle; $('updateProgressBar').style.width = `${Math.max(0, Math.min(100, update.progress || 0))}%`;
+  $('currentVersion').textContent = update.currentVersion || '0.4.0'; $('updateBadge').textContent = labels[update.status] || 'Bereit'; $('updateStatus').textContent = messages[update.status] || messages.idle; $('updateProgressBar').style.width = `${Math.max(0, Math.min(100, update.progress || 0))}%`;
   $('downloadUpdateBtn').disabled = update.status !== 'available'; $('installUpdateBtn').disabled = update.status !== 'downloaded';
 }
 async function checkUpdate() { $('checkUpdateBtn').disabled = true; updateUpdateView({ ...(launcherState?.update || {}), status: 'checking' }); const result = await window.vortex.checkForUpdates(); launcherState.update = result; updateUpdateView(result); $('checkUpdateBtn').disabled = false; }
@@ -70,7 +71,7 @@ async function installUpdate() { const result = await window.vortex.installUpdat
 function showPage(page) { document.querySelectorAll('.page').forEach(element => element.classList.toggle('active', element.id === page)); document.querySelectorAll('.nav-link').forEach(element => element.classList.toggle('active', element.dataset.page === page)); if (page === 'library') refreshLibrary(); if (page === 'updates') updateUpdateView(); }
 async function refresh() {
   launcherState = await window.vortex.getState(); selectedVersion = launcherState.state?.selectedVersion || '1.21.11'; selectedHat = launcherState.state?.hat || 'vortex-cap'; selectedEmblem = launcherState.state?.emblem || 'vortex-crest';
-  setAccount(launcherState.account); renderVersions(); renderInstanceCards(); updatePlaySummary(); updateCosmetics(); updateUpdateView(launcherState.update); await refreshLibrary();
+  setAccount(launcherState.account); renderVersions(); renderInstanceCards(); updatePlaySummary(); updateCosmetics(); updateUpdateView(launcherState.update); renderOnlineModVersions(); await refreshLibrary();
 }
 async function login() { const button = $('loginBtn'); button.disabled = true; addLog('Microsoft-Anmeldung wird gestartet …'); const result = await window.vortex.login(); if (result.ok) { setAccount(result.account); addLog(`Angemeldet als ${result.account.username}`, 'success'); } else { addLog(result.error, 'error'); setAccount(null); } }
 async function logout() { await window.vortex.logout(); setAccount(null); addLog('Konto abgemeldet.'); }
@@ -99,9 +100,36 @@ async function refreshLibrary() {
   $('modList').innerHTML = mods.length ? mods.map(mod => `<div class="mod-row"><span class="mod-dot ${mod.required ? 'core' : 'custom'}"></span><div><strong>${escapeHtml(mod.name)}</strong><small>${mod.required ? 'Vortex-Pflichtmod · wird beim Prüfen geschützt' : 'Eigener Mod · in dieser Instanz gespeichert'}</small></div><span class="mod-badge ${mod.required ? 'required' : ''}">${mod.required ? 'CORE' : 'EIGEN'}</span></div>`).join('') : `<div class="empty-library">Noch keine JAR-Dateien vorhanden. Klicke auf „Instanz reparieren“ oder öffne den Mods-Ordner.</div>`;
   if (summary) $('libraryVersion').value = version;
 }
+function renderOnlineModVersions() {
+  const select = $('onlineModVersion');
+  if (!select || !launcherState) return;
+  select.innerHTML = launcherState.versions.map(item => `<option value="${escapeHtml(item.version)}">${escapeHtml(item.version)} · Fabric</option>`).join('');
+  select.value = selectedVersion;
+}
+function renderOnlineMods() {
+  const container = $('onlineModResults');
+  if (!onlineModResults.length) { container.innerHTML = '<div class="empty-library">Keine kompatiblen Mods gefunden. Probiere einen anderen Namen.</div>'; return; }
+  container.innerHTML = onlineModResults.map((mod, index) => `<article class="online-mod-card"><div class="online-mod-icon">${escapeHtml(mod.title.slice(0, 1).toUpperCase())}</div><div class="online-mod-main"><div class="online-mod-title"><h3>${escapeHtml(mod.title)}</h3><span class="mod-badge required">${escapeHtml(mod.versionType || 'release')}</span></div><p>${escapeHtml(mod.description)}</p><small>${escapeHtml(mod.versionNumber)} · ${escapeHtml(mod.gameVersion)} · ${escapeHtml((mod.categories || []).slice(0, 3).join(' · '))} · ${Number(mod.downloads || 0).toLocaleString('de-DE')} Downloads</small></div><button class="button secondary mod-download-button" data-mod-index="${index}">Herunterladen</button></article>`).join('');
+  container.querySelectorAll('[data-mod-index]').forEach(button => button.onclick = () => downloadOnlineMod(Number(button.dataset.modIndex), button));
+}
+async function searchOnlineMods() {
+  const query = $('modSearchInput').value.trim(); const version = $('onlineModVersion').value || selectedVersion; const button = $('searchModsBtn');
+  if (query.length < 2) { $('modSearchStatus').textContent = 'Bitte gib mindestens zwei Zeichen ein.'; return; }
+  button.disabled = true; $('modSearchStatus').textContent = `Suche nach „${query}“ für Minecraft ${version} …`; $('onlineModResults').innerHTML = '<div class="empty-library">Kompatible Mod-Versionen werden geladen …</div>';
+  const result = await window.vortex.searchMods(query, version); button.disabled = false;
+  if (!result.ok) { onlineModResults = []; $('modSearchStatus').textContent = result.error || 'Die Modsuche ist fehlgeschlagen.'; renderOnlineMods(); return; }
+  onlineModResults = result.results || []; $('modSearchStatus').textContent = `${onlineModResults.length} kompatible Vorschläge für Minecraft ${version}.`; renderOnlineMods();
+}
+async function downloadOnlineMod(index, button) {
+  const mod = onlineModResults[index]; const version = $('onlineModVersion').value || selectedVersion; if (!mod) return;
+  button.disabled = true; button.textContent = 'Lädt …';
+  const result = await window.vortex.downloadMod(version, { projectId: mod.projectId, versionId: mod.versionId });
+  if (result.ok) { button.textContent = 'Installiert'; addLog(`${result.fileName} wurde in Minecraft ${result.version} installiert.`, 'success'); await refresh(); }
+  else { button.disabled = false; button.textContent = 'Erneut versuchen'; addLog(result.error || 'Mod konnte nicht geladen werden.', 'error'); }
+}
 
 $('playBtn').onclick = launch; $('prepareBtn').onclick = () => prepare(); $('openModsBtn').onclick = () => window.vortex.openModsFolder(selectedVersion); $('openInstanceBtn').onclick = () => window.vortex.openInstanceFolder(selectedVersion); $('clearLog').onclick = () => { logEl.innerHTML = ''; }; $('cosmeticsInfoBtn').onclick = () => window.vortex.showCosmeticsInfo();
 document.querySelectorAll('.nav-link').forEach(button => button.onclick = () => showPage(button.dataset.page)); document.querySelectorAll('[data-page-target]').forEach(button => button.onclick = () => showPage(button.dataset.pageTarget)); document.querySelectorAll('.hat-card').forEach(button => button.onclick = () => saveCosmetics({ hat: button.dataset.hat })); document.querySelectorAll('.emblem-card').forEach(button => button.onclick = () => saveCosmetics({ emblem: button.dataset.emblem }));
-$('createCosmeticsBtn').onclick = createCosmeticSkin; $('openSkinsBtn').onclick = () => window.vortex.openSkinsFolder(launcherState.cosmeticsVersion); $('openProfileBtn').onclick = () => window.vortex.openCosmeticsProfile(launcherState.cosmeticsVersion); $('refreshModsBtn').onclick = refreshLibrary; $('prepareLibraryBtn').onclick = () => prepare(selectedVersion); $('openLibraryModsBtn').onclick = () => window.vortex.openModsFolder(selectedVersion); $('checkUpdateBtn').onclick = checkUpdate; $('downloadUpdateBtn').onclick = downloadUpdate; $('installUpdateBtn').onclick = installUpdate;
+$('createCosmeticsBtn').onclick = createCosmeticSkin; $('openSkinsBtn').onclick = () => window.vortex.openSkinsFolder(launcherState.cosmeticsVersion); $('searchModsBtn').onclick = searchOnlineMods; $('modSearchInput').onkeydown = event => { if (event.key === 'Enter') searchOnlineMods(); }; $('openProfileBtn').onclick = () => window.vortex.openCosmeticsProfile(launcherState.cosmeticsVersion); $('refreshModsBtn').onclick = refreshLibrary; $('prepareLibraryBtn').onclick = () => prepare(selectedVersion); $('openLibraryModsBtn').onclick = () => window.vortex.openModsFolder(selectedVersion); $('checkUpdateBtn').onclick = checkUpdate; $('downloadUpdateBtn').onclick = downloadUpdate; $('installUpdateBtn').onclick = installUpdate;
 window.vortex.onStatus(({ type, message }) => { setStatus(message); addLog(message, type); if (type === 'success' && message.includes('gestartet')) { $('playBtn').disabled = false; $('playLabel').textContent = 'Vortex starten'; } }); window.vortex.onLog(message => addLog(message)); window.vortex.onProgress(data => { if (data?.type) setStatus(`Lade ${data.type} …`); }); window.vortex.onUpdateState(update => { if (launcherState) launcherState.update = update; updateUpdateView(update); });
-addLog('Vortex Client Launcher 0.3.0 bereit.'); refresh();
+addLog('Vortex Client Launcher 0.4.0 bereit.'); refresh();

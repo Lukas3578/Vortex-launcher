@@ -15,10 +15,11 @@
         <button class="nav-link" data-page="instances"><i>▦</i> Instanzen</button>
         <button class="nav-link" data-page="cosmetics"><i>✦</i> Cosmetics</button>
         <button class="nav-link" data-page="library"><i>≡</i> Mod-Bibliothek</button>
+        <button class="nav-link" data-page="online-mods"><i>⌕</i> Online-Mods</button>
         <button class="nav-link" data-page="updates"><i>↻</i> Updates</button>
       </nav>
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Fabric-Instanzen geschützt</small></div></section>
-      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.3.0</span></div>
+      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.4.0</span></div>
     </aside>
 
     <main>
@@ -51,7 +52,9 @@
 
       <section class="page" id="updates"><div class="page-heading"><p class="eyebrow">VORTEX CLIENT · WARTUNG</p><h2>Launcher aktuell halten.</h2><p>Neue Launcher-Versionen werden über GitHub Releases bereitgestellt. Du musst keine neue EXE manuell herunterladen: Prüfe hier auf Updates, lade sie herunter und starte anschließend die Installation.</p></div><article class="update-card"><div class="update-card-header"><div><p class="eyebrow">INSTALLIERTE VERSION</p><h3 id="currentVersion">—</h3></div><span class="status-pill" id="updateBadge">Bereit</span></div><p class="update-status" id="updateStatus">Noch nicht auf Updates geprüft.</p><div class="update-progress"><div id="updateProgressBar"></div></div><div class="update-actions"><button class="button secondary" id="checkUpdateBtn">Nach Updates suchen</button><button class="button secondary" id="downloadUpdateBtn" disabled>Update herunterladen</button><button class="button primary" id="installUpdateBtn" disabled>Update installieren</button></div><p class="activation-note">Updates funktionieren in der installierten Windows-Version. Beim Entwickeln mit <code>npm start</code> ist die automatische Suche absichtlich deaktiviert.</p></article></section>
 
-      <footer><span>VORTEX CLIENT 0.3.0</span><span id="statusText">Launcher bereit</span></footer>
+      <section class="page" id="online-mods"><div class="page-heading"><p class="eyebrow">MODRINTH · FABRIC-MOD-SUCHE</p><h2>Mods direkt in deine Instanz.</h2><p>Gib einen Modnamen ein. Der Launcher schlägt passende Modrinth-Projekte vor, filtert nach der ausgewählten Minecraft-Version und Fabric und lädt die ausgewählte JAR-Datei direkt in den richtigen Mods-Ordner.</p></div><div class="online-mod-toolbar"><select id="onlineModVersion" aria-label="Minecraft-Version"></select><input id="modSearchInput" type="search" placeholder="Zum Beispiel: Sodium, AppleSkin oder minimap …" maxlength="80" autocomplete="off" /><button class="button primary" id="searchModsBtn">Mods suchen</button></div><p class="mod-search-status" id="modSearchStatus">Noch keine Suche gestartet.</p><div class="online-mod-results" id="onlineModResults"><div class="empty-library">Suche nach einem Modnamen, um kompatible Vorschläge zu sehen.</div></div><p class="activation-note">Die Online-Suche verwendet die öffentliche Modrinth-API. Es werden nur HTTPS-JAR-Dateien mit passender Minecraft-Version und Fabric akzeptiert. Bereits vorhandene Dateinamen werden nicht überschrieben.</p></section>
+
+      <footer><span>VORTEX CLIENT 0.4.0</span><span id="statusText">Launcher bereit</span></footer>
     </main>
   </div>
   <script src="renderer.js"></script>
