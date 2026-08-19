@@ -38,7 +38,7 @@ function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSyn
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.5 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.4.6 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -312,12 +312,47 @@ function applyHat(png, hat) {
   if (hat === 'cyber-headphones') { fillPixels(png, 32, 9, 2, 6, 0xff3ad6ff); fillPixels(png, 54, 9, 2, 6, 0xff3ad6ff); fillPixels(png, 34, 8, 4, 1, 0xff15447e); fillPixels(png, 50, 8, 4, 1, 0xff15447e); return; }
   if (hat === 'slime-antenna') { fillPixels(png, 43, 7, 2, 2, 0xff7dff85); writePixel(png, 44, 6, 0xffb5ff5b); fillPixels(png, 40, 9, 8, 1, 0xff2f7d48); }
 }
+function clearCapeOverlay(png) { fillPixels(png, 32, 36, 8, 12, 0x00000000); }
+function drawCapeBase(png, colors) {
+  const { base, shade, trim, light } = colors;
+  // Die äußere Rückenfläche des Standard-Skins liegt im Rechteck x=32–39, y=36–47.
+  fillPixels(png, 34, 36, 4, 1, trim);
+  fillPixels(png, 33, 37, 6, 1, shade);
+  fillPixels(png, 32, 38, 8, 7, base);
+  fillPixels(png, 33, 45, 6, 1, base);
+  fillPixels(png, 34, 46, 4, 1, base);
+  fillPixels(png, 35, 47, 2, 1, shade);
+  fillPixels(png, 32, 38, 1, 7, trim);
+  fillPixels(png, 39, 38, 1, 7, shade);
+  fillPixels(png, 33, 45, 6, 1, shade);
+  fillPixels(png, 34, 46, 4, 1, shade);
+  writePixel(png, 33, 38, light);
+  writePixel(png, 34, 38, light);
+}
 function applyEmblem(png, emblem) {
+  clearCapeOverlay(png);
   if (emblem === 'none') return;
-  fillPixels(png, 32, 20, 8, 12, 0x00000000);
-  if (emblem === 'vortex-crest') { writePixel(png, 33, 22, 0xff2ea8ff); writePixel(png, 38, 22, 0xff2ea8ff); writePixel(png, 34, 24, 0xff42dfff); writePixel(png, 37, 24, 0xff42dfff); writePixel(png, 35, 26, 0xff77f4ff); writePixel(png, 36, 26, 0xff77f4ff); return; }
-  if (emblem === 'nebula-mark') { fillPixels(png, 34, 22, 4, 4, 0xff6c3dce); fillPixels(png, 33, 23, 6, 2, 0xffa461ff); writePixel(png, 35, 21, 0xffe3c0ff); writePixel(png, 36, 26, 0xffecdbff); return; }
-  if (emblem === 'void-rune') { fillPixels(png, 35, 21, 2, 7, 0xffcbd8ed); fillPixels(png, 33, 23, 6, 1, 0xff7d8fa9); writePixel(png, 34, 26, 0xffe4f2ff); writePixel(png, 37, 26, 0xffe4f2ff); }
+  if (emblem === 'vortex-crest') {
+    drawCapeBase(png, { base: 0xff0f3e9f, shade: 0xff081f55, trim: 0xff06132f, light: 0xff58ddff });
+    writePixel(png, 34, 40, 0xff2ca8ff); writePixel(png, 37, 40, 0xff2ca8ff);
+    writePixel(png, 35, 41, 0xff56dfff); writePixel(png, 36, 41, 0xff56dfff);
+    writePixel(png, 35, 42, 0xff7cf4ff); writePixel(png, 36, 42, 0xff7cf4ff);
+    writePixel(png, 35, 43, 0xff2199e8); writePixel(png, 36, 43, 0xff2199e8);
+    return;
+  }
+  if (emblem === 'nebula-mark') {
+    drawCapeBase(png, { base: 0xff52238d, shade: 0xff29134e, trim: 0xff160b2d, light: 0xffd9a7ff });
+    fillPixels(png, 35, 40, 2, 1, 0xffe4c2ff); fillPixels(png, 34, 41, 4, 2, 0xffa860ff);
+    writePixel(png, 33, 42, 0xff7b48df); writePixel(png, 38, 42, 0xff7b48df);
+    fillPixels(png, 35, 43, 2, 1, 0xffe7d5ff);
+    return;
+  }
+  if (emblem === 'void-rune') {
+    drawCapeBase(png, { base: 0xff263447, shade: 0xff111b2a, trim: 0xff080d16, light: 0xffdae8ff });
+    fillPixels(png, 35, 39, 2, 5, 0xffc6d7ed);
+    fillPixels(png, 34, 40, 1, 1, 0xff718ba8); fillPixels(png, 37, 40, 1, 1, 0xff718ba8);
+    fillPixels(png, 34, 42, 4, 1, 0xff9db5d0); writePixel(png, 35, 44, 0xffe9f3ff); writePixel(png, 36, 44, 0xffe9f3ff);
+  }
 }
 function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   if (version !== COSMETICS_MOD_VERSION) throw new Error('Die integrierte Vortex-Cosmetics-Ausgabe unterstützt aktuell Minecraft 1.21.11.');
@@ -332,7 +367,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.5' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.4.6' };
   writeJson(profileFile(version), profile);
   return profile;
 }
