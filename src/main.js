@@ -31,7 +31,23 @@ const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
 const instancesRoot = path.join(dataRoot, 'instances');
 const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
+const newsFile = path.join(dataRoot, 'release-news.json');
+const profileImagesRoot = path.join(dataRoot, 'profile-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
+
+const RELEASE_NEWS = [
+  {
+    version: '0.9.9',
+    title: 'Neuigkeiten & Profil-Update',
+    summary: 'Nach jedem Launcher-Update siehst du nun gesammelt, was neu ist.',
+    items: [
+      'Neue „Neu in dieser Version“-Ansicht mit allen Änderungen seit deinem letzten Update.',
+      'Überarbeitete Konto-Karte oben rechts mit Microsoft-Avatar und persönlichem Profilbild.',
+      'Profilbild kann lokal ausgewählt, geändert oder wieder entfernt werden.',
+      'Klarere Update-Kommunikation mit einem einfachen Aktualisieren-und-neu-starten-Ablauf.'
+    ]
+  }
+];
 
 const JAVA_25_DOWNLOAD_URL = 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse';
 
@@ -122,6 +138,17 @@ function appendPersistentLog(file, message) { try { ensureDir(dataRoot); const l
 function send(channel, payload) { if (channel === 'log') appendPersistentLog(launchLogPath(), payload); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload); }
 function loadJson(file, fallback) { try { return exists(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : fallback; } catch (_) { return fallback; } }
 function writeJson(file, value) { ensureDir(path.dirname(file)); fs.writeFileSync(file, JSON.stringify(value, null, 2), 'utf8'); }
+function versionParts(value) { return String(value || '').replace(/^v/i, '').split('.').map(part => Number.parseInt(part, 10) || 0); }
+function compareVersions(left, right) { const a = versionParts(left); const b = versionParts(right); for (let index = 0; index < Math.max(a.length, b.length); index += 1) { const delta = (a[index] || 0) - (b[index] || 0); if (delta) return delta; } return 0; }
+function releaseNewsState() { const state = loadJson(newsFile, {}); return { lastSeenVersion: typeof state.lastSeenVersion === 'string' ? state.lastSeenVersion : null }; }
+function unreadReleaseNews() {
+  const currentVersion = app.getVersion();
+  const state = releaseNewsState();
+  const available = RELEASE_NEWS.filter(note => compareVersions(note.version, currentVersion) <= 0).sort((a, b) => compareVersions(a.version, b.version));
+  const notes = state.lastSeenVersion ? available.filter(note => compareVersions(note.version, state.lastSeenVersion) > 0) : available.filter(note => compareVersions(note.version, currentVersion) === 0);
+  return { currentVersion, notes };
+}
+function markReleaseNewsSeen() { writeJson(newsFile, { schemaVersion: 1, lastSeenVersion: app.getVersion(), seenAt: new Date().toISOString() }); return unreadReleaseNews(); }
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choice.json'); }
@@ -135,7 +162,7 @@ function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.8 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.9 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -419,7 +446,43 @@ async function downloadUpdate() {
 }
 
 function accountId(value = {}) { const uuid = String(value.uuid || '').trim().toLowerCase(); return uuid || `name:${String(value.username || '').trim().toLowerCase()}`; }
-function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft-Spieler'), uuid: String(value?.uuid || '') }; }
+function profileImagePath(value) { const file = String(value?.profileImage || ''); return /^[a-z0-9][a-z0-9._-]{0,100}\.(png|jpe?g|webp)$/i.test(file) ? path.join(profileImagesRoot, file) : null; }
+function dataUriForImage(file) { if (!file || !exists(file)) return null; const size = fs.statSync(file).size; if (!size || size > 5 * 1024 * 1024) return null; const extension = path.extname(file).toLowerCase(); const type = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'; return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`; }
+function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft-Spieler'), uuid: String(value?.uuid || ''), hasCustomProfileImage: Boolean(dataUriForImage(profileImagePath(value))) }; }
+function avatarFromMinecraftSkin(skin) {
+  const avatar = new PNG({ width: 64, height: 64 });
+  for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
+    const sourceIndex = ((8 + y) * skin.width + (8 + x)) << 2;
+    const hatIndex = ((8 + y) * skin.width + (40 + x)) << 2;
+    for (let scaleY = 0; scaleY < 8; scaleY += 1) for (let scaleX = 0; scaleX < 8; scaleX += 1) {
+      const targetIndex = ((y * 8 + scaleY) * 64 + (x * 8 + scaleX)) << 2;
+      avatar.data[targetIndex] = skin.data[sourceIndex]; avatar.data[targetIndex + 1] = skin.data[sourceIndex + 1]; avatar.data[targetIndex + 2] = skin.data[sourceIndex + 2]; avatar.data[targetIndex + 3] = skin.data[sourceIndex + 3];
+      if (skin.data[hatIndex + 3]) { avatar.data[targetIndex] = skin.data[hatIndex]; avatar.data[targetIndex + 1] = skin.data[hatIndex + 1]; avatar.data[targetIndex + 2] = skin.data[hatIndex + 2]; avatar.data[targetIndex + 3] = skin.data[hatIndex + 3]; }
+    }
+  }
+  return PNG.sync.write(avatar);
+}
+async function minecraftAvatarData(value) {
+  const uuid = String(value?.uuid || '').replace(/-/g, '');
+  if (!/^[a-f0-9]{32}$/i.test(uuid)) return null;
+  const cache = path.join(profileImagesRoot, `minecraft-${uuid.toLowerCase()}.png`);
+  const cached = dataUriForImage(cache); if (cached) return cached;
+  try {
+    const profileResponse = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${uuid}`, { signal: AbortSignal.timeout(15000) });
+    if (!profileResponse.ok) return null;
+    const profile = await profileResponse.json();
+    const property = (profile.properties || []).find(entry => entry.name === 'textures' && typeof entry.value === 'string');
+    const skinUrl = property ? JSON.parse(Buffer.from(property.value, 'base64').toString('utf8'))?.textures?.SKIN?.url : null;
+    if (!/^https:\/\/textures\.minecraft\.net\/texture\/[a-f0-9]+$/i.test(skinUrl || '')) return null;
+    const skinResponse = await fetch(skinUrl, { signal: AbortSignal.timeout(15000) });
+    if (!skinResponse.ok) return null;
+    const skin = PNG.sync.read(Buffer.from(await skinResponse.arrayBuffer()));
+    if (skin.width !== 64 || skin.height < 32) return null;
+    ensureDir(profileImagesRoot); fs.writeFileSync(cache, avatarFromMinecraftSkin(skin));
+    return dataUriForImage(cache);
+  } catch (_) { return null; }
+}
+async function accountAvatar(value) { return dataUriForImage(profileImagePath(value)) || minecraftAvatarData(value); }
 function saveAccounts() { const activeAccountId = account ? accountId(account) : null; writeJson(accountFile, { schemaVersion: 2, activeAccountId, accounts }); }
 function loadAccount() {
   const stored = loadJson(accountFile, null);
@@ -764,7 +827,25 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('mark-release-news-seen', () => ({ ok: true, news: markReleaseNewsSeen() }));
+ipcMain.handle('get-account-avatar', async (_event, id) => { const selected = accounts.find(entry => accountId(entry) === String(id || '')); return { ok: Boolean(selected), avatar: selected ? await accountAvatar(selected) : null, custom: Boolean(selected && dataUriForImage(profileImagePath(selected))) }; });
+ipcMain.handle('select-account-avatar', async (_event, id) => {
+  try {
+    const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) throw new Error('Das gespeicherte Konto wurde nicht gefunden.');
+    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Persönliches Profilbild wählen', properties: ['openFile'], filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+    if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
+    const source = choice.filePaths[0]; const stat = fs.statSync(source); if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('Wähle ein Bild mit maximal 5 MB.');
+    const extension = path.extname(source).toLowerCase(); if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) throw new Error('Dieses Bildformat wird nicht unterstützt.');
+    ensureDir(profileImagesRoot); const fileName = `profile-${safeFileName(accountId(selected))}${extension}`; fs.copyFileSync(source, path.join(profileImagesRoot, fileName)); selected.profileImage = fileName; saveAccounts();
+    return { ok: true, avatar: dataUriForImage(profileImagePath(selected)), custom: true };
+  } catch (error) { return { ok: false, error: error.message }; }
+});
+ipcMain.handle('reset-account-avatar', async (_event, id) => {
+  const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' };
+  const image = profileImagePath(selected); if (image) try { fs.rmSync(image, { force: true }); } catch (_) {}
+  delete selected.profileImage; saveAccounts(); return { ok: true, avatar: await minecraftAvatarData(selected), custom: false };
+});
 ipcMain.handle('ai-get-state', () => aiStudio.getState());
 ipcMain.handle('ai-save-key', (_event, key, provider, textModel) => { try { return { ok: true, state: aiStudio.saveKey(key, provider, textModel) }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-remove-key', () => ({ ok: true, state: aiStudio.removeKey() }));

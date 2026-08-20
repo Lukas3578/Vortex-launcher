@@ -2,6 +2,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
+  markReleaseNewsSeen: () => ipcRenderer.invoke('mark-release-news-seen'),
+  getAccountAvatar: (id) => ipcRenderer.invoke('get-account-avatar', id),
+  selectAccountAvatar: (id) => ipcRenderer.invoke('select-account-avatar', id),
+  resetAccountAvatar: (id) => ipcRenderer.invoke('reset-account-avatar', id),
   getAiState: () => ipcRenderer.invoke('ai-get-state'),
   saveAiKey: (key, provider, textModel) => ipcRenderer.invoke('ai-save-key', key, provider, textModel),
   removeAiKey: () => ipcRenderer.invoke('ai-remove-key'),
