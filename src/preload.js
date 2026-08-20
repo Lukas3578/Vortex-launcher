@@ -2,6 +2,10 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
+  listServers: () => ipcRenderer.invoke('list-servers'),
+  addServer: (server) => ipcRenderer.invoke('add-server', server),
+  selectServer: (id) => ipcRenderer.invoke('select-server', id),
+  removeServer: (id) => ipcRenderer.invoke('remove-server', id),
   markReleaseNewsSeen: () => ipcRenderer.invoke('mark-release-news-seen'),
   getAccountAvatar: (id) => ipcRenderer.invoke('get-account-avatar', id),
   selectAccountAvatar: (id) => ipcRenderer.invoke('select-account-avatar', id),
@@ -51,7 +55,7 @@ contextBridge.exposeInMainWorld('vortex', {
   selectAccount: (id) => ipcRenderer.invoke('select-account', id),
   removeAccount: (id) => ipcRenderer.invoke('remove-account', id),
   logout: () => ipcRenderer.invoke('logout'),
-  launch: (version) => ipcRenderer.invoke('launch', version),
+  launch: (version, serverId = null) => ipcRenderer.invoke('launch', version, serverId),
   onStatus: (callback) => ipcRenderer.on('status', (_event, value) => callback(value)),
   onLog: (callback) => ipcRenderer.on('log', (_event, value) => callback(value)),
   onProgress: (callback) => ipcRenderer.on('progress', (_event, value) => callback(value)),

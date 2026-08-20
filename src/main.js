@@ -32,10 +32,24 @@ const instancesRoot = path.join(dataRoot, 'instances');
 const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
+const serversFile = path.join(dataRoot, 'servers.json');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
+const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true, description: 'Offizieller VortexPvP-Server' });
+
 const RELEASE_NEWS = [
+  {
+    version: '0.9.10',
+    title: 'Server-Bibliothek & Direct-Join',
+    summary: 'Server verwalten und direkt über deine Vortex-Instanz beitreten.',
+    items: [
+      'Neue Server-Seite zum Speichern, Auswählen und Entfernen eigener Minecraft-Server.',
+      'Direkter Mehrspielerstart: Ein Klick auf „Beitreten“ startet Minecraft mit der ausgewählten Server-IP.',
+      'Mc.VortexPvP.Eu ist als offizieller VortexPvP-Server immer sichtbar und bleibt dauerhaft verfügbar.',
+      'Überarbeitete Spielseite mit einem schnellen VortexPvP-Beitrittsknopf und klareren Startzuständen.'
+    ]
+  },
   {
     version: '0.9.9',
     title: 'Neuigkeiten & Profil-Update',
@@ -162,7 +176,7 @@ function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.9 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.10 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -522,15 +536,39 @@ function removeAccount(id) {
   return removed;
 }
 function accountSummaries() { return accounts.map(accountSummary); }
+function normalizeServerAddress(value) {
+  const input = String(value || '').trim().toLowerCase().replace(/\.$/, '');
+  if (!input || input.length > 253 || /[\s/\\@]/.test(input)) return null;
+  const parts = input.split(':'); if (parts.length > 2) return null;
+  const host = parts[0]; const port = parts[1] || '';
+  if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$|^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) return null;
+  if (port && (!/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535)) return null;
+  return port ? `${host}:${Number(port)}` : host;
+}
+function normalizeServer(entry) {
+  const name = String(entry?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42);
+  const address = normalizeServerAddress(entry?.address);
+  const id = String(entry?.id || '');
+  if (!name || !address || !/^[a-z0-9][a-z0-9_-]{3,60}$/i.test(id)) return null;
+  return { id, name, address, official: false, description: String(entry?.description || '').trim().slice(0, 120), addedAt: String(entry?.addedAt || '') };
+}
+function serverLibrary() {
+  const stored = loadJson(serversFile, {}); const seen = new Set([OFFICIAL_SERVER.address]);
+  const custom = Array.isArray(stored?.servers) ? stored.servers.map(normalizeServer).filter(Boolean).filter(server => !seen.has(server.address) && Boolean(seen.add(server.address))).slice(0, 50) : [];
+  return [OFFICIAL_SERVER, ...custom];
+}
+function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 1, servers: servers.filter(server => !server.official) }); }
+function serverById(id) { return serverLibrary().find(server => server.id === String(id || '')) || null; }
 function loadState() {
   const legacy = loadJson(stateFile, {});
   return {
     selectedVersion: SUPPORTED_VERSIONS.includes(legacy.selectedVersion) ? legacy.selectedVersion : COSMETICS_MOD_VERSION,
+    selectedServerId: serverById(legacy.selectedServerId)?.id || OFFICIAL_SERVER.id,
     hat: HATS.includes(legacy.hat) ? legacy.hat : 'vortex-cap',
     emblem: EMBLEMS.includes(legacy.emblem) ? legacy.emblem : 'vortex-crest'
   };
 }
-function saveState(patch) { const state = { ...loadState(), ...patch }; writeJson(stateFile, state); return state; }
+function saveState(patch) { const state = { ...loadState(), ...patch }; if (!serverById(state.selectedServerId)) state.selectedServerId = OFFICIAL_SERVER.id; writeJson(stateFile, state); return state; }
 
 function copyIfChanged(source, destination) {
   if (!exists(destination) || fs.statSync(source).size !== fs.statSync(destination).size || hashFile(source) !== hashFile(destination)) {
@@ -827,7 +865,11 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverLibrary(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('list-servers', () => ({ ok: true, servers: serverLibrary(), selectedServerId: loadState().selectedServerId }));
+ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, description: String(input?.description || '').trim().slice(0, 120), addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server, servers: serverLibrary(), state }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('select-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' }; return { ok: true, server, state: saveState({ selectedServerId: server.id }) }; });
+ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverLibrary(), state }; });
 ipcMain.handle('mark-release-news-seen', () => ({ ok: true, news: markReleaseNewsSeen() }));
 ipcMain.handle('get-account-avatar', async (_event, id) => { const selected = accounts.find(entry => accountId(entry) === String(id || '')); return { ok: Boolean(selected), avatar: selected ? await accountAvatar(selected) : null, custom: Boolean(selected && dataUriForImage(profileImagePath(selected))) }; });
 ipcMain.handle('select-account-avatar', async (_event, id) => {
@@ -946,10 +988,12 @@ ipcMain.handle('login', async () => {
 ipcMain.handle('select-account', (_event, id) => { const selected = selectAccount(id); if (!selected) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'success', message: `Aktives Konto: ${selected.username}` }); return { ok: true, account: accountSummary(selected), accounts: accountSummaries() }; });
 ipcMain.handle('remove-account', (_event, id) => { const removed = removeAccount(id); if (!removed) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'info', message: `${removed.username} wurde aus dem Launcher entfernt.` }); return { ok: true, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
 ipcMain.handle('logout', () => { if (!account) return { ok: true, account: null, accounts: accountSummaries() }; const removed = removeAccount(accountId(account)); return { ok: true, removed: removed ? accountSummary(removed) : null, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
-ipcMain.handle('launch', async (_event, requestedVersion) => {
+ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = null) => {
   const version = sanitizeVersion(requestedVersion || loadState().selectedVersion);
+  const server = requestedServerId ? serverById(requestedServerId) : null;
   if (!account?.auth) return { ok: false, error: 'Bitte melde zuerst dein Minecraft-Microsoft-Konto an.' };
   if (!version) return { ok: false, error: 'Wähle eine unterstützte Vortex-Version aus.' };
+  if (requestedServerId && !server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' };
   if (minecraftProcess) return { ok: false, error: 'Minecraft läuft bereits.' };
   try {
     const instance = await ensureInstance(version);
@@ -958,11 +1002,13 @@ ipcMain.handle('launch', async (_event, requestedVersion) => {
     launcher.on('data', message => send('log', String(message)));
     launcher.on('download-status', data => send('progress', data));
     launcher.on('progress', data => send('progress', data));
-    send('status', { type: 'info', message: `Starte Vortex Client ${version} mit Fabric …` });
+    send('status', { type: 'info', message: server ? `Starte ${server.name} (${server.address}) mit Vortex Client ${version} …` : `Starte Vortex Client ${version} mit Fabric …` });
     const javaPath = await javaPathForVersion(version);
-    minecraftProcess = await launcher.launch({ authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } });
+    const options = { authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } };
+    if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
+    minecraftProcess = await launcher.launch(options);
     minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft beendet (Code ${code}).` }); });
-    send('status', { type: 'success', message: 'Minecraft wurde mit der Vortex-Fabric-Instanz gestartet.' });
-    return { ok: true };
+    send('status', { type: 'success', message: server ? `Minecraft startet direkt mit ${server.name}.` : 'Minecraft wurde mit der Vortex-Fabric-Instanz gestartet.' });
+    return { ok: true, server: server ? { id: server.id, name: server.name, address: server.address } : null };
   } catch (error) { minecraftProcess = null; send('status', { type: 'error', message: `Start fehlgeschlagen: ${error.message}` }); return { ok: false, error: error.message }; }
 });
