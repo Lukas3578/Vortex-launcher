@@ -33,12 +33,24 @@ const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
 const serversFile = path.join(dataRoot, 'servers.json');
+const serverImagesRoot = path.join(dataRoot, 'server-images');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
-const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true, description: 'Offizieller VortexPvP-Server' });
+const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true, description: 'Der offizielle VortexPvP-Server. Starte direkt aus deiner Vortex-Fabric-Instanz.', imageKind: 'builtin' });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.11',
+    title: 'Visuelle Server-Galerie',
+    summary: 'Serverkarten zeigen jetzt Bilder und Beschreibungen statt nur einer IP-Adresse.',
+    items: [
+      'VortexPvP erhält ein eigenes lokales Vortex-Banner im Stil der offiziellen Website.',
+      'Eigene Serverkarten zeigen Name, IP, Beschreibung und ein frei wählbares lokales Bild.',
+      'Serverbilder werden ausschließlich lokal im Vortex-Datenordner gespeichert und lassen sich jederzeit ändern.',
+      'Die Server-Bibliothek wurde zu einer übersichtlichen visuellen Karten-Galerie überarbeitet.'
+    ]
+  },
   {
     version: '0.9.10',
     title: 'Server-Bibliothek & Direct-Join',
@@ -176,7 +188,7 @@ function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.10 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.11 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -545,19 +557,29 @@ function normalizeServerAddress(value) {
   if (port && (!/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535)) return null;
   return port ? `${host}:${Number(port)}` : host;
 }
+function serverImagePath(server) {
+  const file = String(server?.imageFile || '');
+  if (!/^[a-z0-9][a-z0-9._-]{3,100}\.(png|jpe?g|webp)$/i.test(file)) return null;
+  const target = path.join(serverImagesRoot, file);
+  return target.startsWith(`${serverImagesRoot}${path.sep}`) ? target : null;
+}
 function normalizeServer(entry) {
   const name = String(entry?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42);
   const address = normalizeServerAddress(entry?.address);
   const id = String(entry?.id || '');
   if (!name || !address || !/^[a-z0-9][a-z0-9_-]{3,60}$/i.test(id)) return null;
-  return { id, name, address, official: false, description: String(entry?.description || '').trim().slice(0, 120), addedAt: String(entry?.addedAt || '') };
+  const candidate = { id, name, address, official: false, description: String(entry?.description || '').trim().slice(0, 120), imageFile: String(entry?.imageFile || ''), addedAt: String(entry?.addedAt || '') };
+  if (!serverImagePath(candidate) || !exists(serverImagePath(candidate))) candidate.imageFile = '';
+  return candidate;
 }
 function serverLibrary() {
   const stored = loadJson(serversFile, {}); const seen = new Set([OFFICIAL_SERVER.address]);
   const custom = Array.isArray(stored?.servers) ? stored.servers.map(normalizeServer).filter(Boolean).filter(server => !seen.has(server.address) && Boolean(seen.add(server.address))).slice(0, 50) : [];
   return [OFFICIAL_SERVER, ...custom];
 }
-function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 1, servers: servers.filter(server => !server.official) }); }
+function serverSummary(server) { return { id: server.id, name: server.name, address: server.address, official: Boolean(server.official), description: server.description || '', imageKind: server.imageKind || (server.imageFile ? 'custom' : 'none'), hasImage: Boolean(server.official || server.imageFile), addedAt: server.addedAt || '' }; }
+function serverSummaries() { return serverLibrary().map(serverSummary); }
+function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 2, servers: servers.filter(server => !server.official) }); }
 function serverById(id) { return serverLibrary().find(server => server.id === String(id || '')) || null; }
 function loadState() {
   const legacy = loadJson(stateFile, {});
@@ -865,11 +887,23 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverLibrary(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
-ipcMain.handle('list-servers', () => ({ ok: true, servers: serverLibrary(), selectedServerId: loadState().selectedServerId }));
-ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, description: String(input?.description || '').trim().slice(0, 120), addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server, servers: serverLibrary(), state }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
+ipcMain.handle('get-server-image', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: true, image: 'builtin', hasImage: true }; const image = serverImagePath(server); return { ok: true, image: image && exists(image) ? dataUriForImage(image) : null, hasImage: Boolean(image && exists(image)) }; });
+ipcMain.handle('select-server-image', async (_event, id) => {
+  try {
+    const server = serverById(id); if (!server) throw new Error('Der Server wurde nicht gefunden.'); if (server.official) throw new Error('Das Bild des offiziellen VortexPvP-Servers wird vom Launcher verwaltet.');
+    const choice = await dialog.showOpenDialog(mainWindow, { title: `Serverbild für ${server.name} wählen`, properties: ['openFile'], filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+    if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
+    const source = choice.filePaths[0]; const stat = fs.statSync(source); if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('Wähle ein Bild mit maximal 5 MB.');
+    const extension = path.extname(source).toLowerCase(); if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) throw new Error('Dieses Bildformat wird nicht unterstützt.');
+    ensureDir(serverImagesRoot); const targetName = `server-${safeFileName(server.id)}${extension}`; const target = path.join(serverImagesRoot, targetName); const old = serverImagePath(server); fs.copyFileSync(source, target); if (old && old !== target) try { fs.rmSync(old, { force: true }); } catch (_) {}
+    const saved = serverLibrary().map(item => item.id === server.id ? { ...item, imageFile: targetName } : item); saveServerLibrary(saved); return { ok: true, image: dataUriForImage(target), servers: serverSummaries() };
+  } catch (error) { return { ok: false, error: error.message }; }
+});
+ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, description: String(input?.description || '').trim().slice(0, 120), imageFile: '', addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server: serverSummary(server), servers: serverSummaries(), state }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('select-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' }; return { ok: true, server, state: saveState({ selectedServerId: server.id }) }; });
-ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverLibrary(), state }; });
+ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const image = serverImagePath(server); const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); if (image) try { fs.rmSync(image, { force: true }); } catch (_) {} const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverSummaries(), state }; });
 ipcMain.handle('mark-release-news-seen', () => ({ ok: true, news: markReleaseNewsSeen() }));
 ipcMain.handle('get-account-avatar', async (_event, id) => { const selected = accounts.find(entry => accountId(entry) === String(id || '')); return { ok: Boolean(selected), avatar: selected ? await accountAvatar(selected) : null, custom: Boolean(selected && dataUriForImage(profileImagePath(selected))) }; });
 ipcMain.handle('select-account-avatar', async (_event, id) => {
