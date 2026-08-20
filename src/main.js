@@ -45,6 +45,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.20',
+    title: 'Vanilla cape correction',
+    summary: 'The three Vortex capes were rebuilt around a clean vanilla cape silhouette with large, readable in-game motifs.',
+    items: [
+      'Removed the decorative technical cape frame and returned the renderer to a single slim vanilla-style moving cape surface.',
+      'Reworked Vortex Crest, Nebula Mark and Void Rune with one bold central symbol per cape, dark cloth material and clean edge binding.',
+      'Updated the 1.21.11 Cosmetics bundle to 2.29.8 and replaced the launcher previews with simple in-game cape views.'
+    ]
+  },
+  {
     version: '0.9.19',
     title: 'Vortex Cosmetics collection redesigned',
     summary: 'Every built-in Vortex cape and 3D hat now has a cohesive, high-contrast Minecraft pixel-art redesign.',
@@ -345,7 +355,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.19 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.20 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
