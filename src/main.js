@@ -58,7 +58,7 @@ function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.5 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.6 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
