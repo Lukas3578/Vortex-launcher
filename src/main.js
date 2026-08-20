@@ -53,7 +53,7 @@ function applyWebsiteCapeChoice(version) { const choice = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.7.0 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.8.0 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -648,7 +648,8 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   if (version !== COSMETICS_MOD_VERSION) throw new Error('Die integrierte Vortex-Cosmetics-Ausgabe unterstützt aktuell Minecraft 1.21.11.');
   const source = PNG.sync.read(fs.readFileSync(sourceFile));
   if (source.width !== 64 || source.height !== 64) throw new Error('Bitte wähle einen gültigen Minecraft-Skin im Format 64×64 Pixel.');
-  applyHat(source, hat);
+  // Hüte werden ab Version 2.29.0 als echte 3D-Geometrie vom Cosmetics-Core
+  // direkt am animierten Kopf dargestellt. Der Skin selbst bleibt dadurch sauber.
   applyEmblem(source, emblem);
   const baseName = safeFileName(path.basename(sourceFile, path.extname(sourceFile)));
   ensureDir(skinsRoot(version));
@@ -657,7 +658,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.7.0' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.8.0' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -717,7 +718,13 @@ ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const emblem = cosmetics.emblem ?? state.emblem;
   if (!HATS.includes(hat) || !EMBLEMS.includes(emblem)) return { ok: false, error: 'Unbekanntes Cosmetic.' };
   const saved = saveState({ hat, emblem });
-  return { ok: true, hat: saved.hat, emblem: saved.emblem };
+  const previousProfile = loadCosmeticProfile(COSMETICS_MOD_VERSION);
+  let profile = null;
+  if (previousProfile?.baseSkin && /^[a-z0-9][a-z0-9._-]*\.png$/i.test(previousProfile.baseSkin)) {
+    const baseSkin = path.join(skinsRoot(COSMETICS_MOD_VERSION), previousProfile.baseSkin);
+    if (exists(baseSkin)) profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, baseSkin, saved.hat, saved.emblem);
+  }
+  return { ok: true, hat: saved.hat, emblem: saved.emblem, profile };
 });
 ipcMain.handle('get-cosmetic-skin-preview', (_event, version = COSMETICS_MOD_VERSION) => cosmeticSkinPreview(version));
 ipcMain.handle('import-cosmetic-skin', async (_event, version, cosmetics = {}) => {
