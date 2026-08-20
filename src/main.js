@@ -6,7 +6,11 @@ const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
 const { Auth } = require('msmc');
 const { autoUpdater } = require('electron-updater');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { createAiStudio } = require('./ai-studio');
+
+const execFileAsync = promisify(execFile);
 
 const FIXED_MEMORY = { min: '2G', max: '4G' };
 const SUPPORTED_VERSIONS = ['1.21.11', '26.1.1', '26.1.2', '26.2'];
@@ -29,7 +33,80 @@ const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
+const JAVA_25_DOWNLOAD_URL = 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse';
+
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
+function javaRuntimeRoot() { return path.join(dataRoot, 'runtime', 'java-25'); }
+function requiresJava25(version) { return /^26\./.test(String(version || '')); }
+// minecraft-launcher-core ruft den übergebenen Pfad zuerst mit `-version` auf.
+// Daher muss unter Windows java.exe (nicht das stille javaw.exe) verwendet werden.
+function javaExecutable(home) { return path.join(home, 'bin', process.platform === 'win32' ? 'java.exe' : 'java'); }
+function javaConsoleExecutable(home) { return javaExecutable(home); }
+function localJavaHomes(root) {
+  const homes = [];
+  if (!root || !exists(root)) return homes;
+  if (exists(javaExecutable(root))) homes.push(root);
+  try { for (const entry of fs.readdirSync(root, { withFileTypes: true })) if (entry.isDirectory()) { const candidate = path.join(root, entry.name); if (exists(javaExecutable(candidate))) homes.push(candidate); } } catch (_) {}
+  return homes;
+}
+async function javaMajorVersion(home) {
+  const binary = javaConsoleExecutable(home);
+  if (!exists(binary)) return null;
+  try {
+    const result = await execFileAsync(binary, ['-version'], { windowsHide: true, timeout: 10000 });
+    const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+    const match = output.match(/version\s+\"(?:1\.)?(\d+)/i) || output.match(/openjdk\s+(\d+)/i);
+    return match ? Number(match[1]) : null;
+  } catch (_) { return null; }
+}
+async function findJava25Home() {
+  const roots = [
+    javaRuntimeRoot(),
+    process.env.JAVA_HOME || '',
+    path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Eclipse Adoptium'),
+    path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Java'),
+    path.join(process.env['ProgramW6432'] || 'C:\\Program Files', 'Microsoft')
+  ];
+  const seen = new Set();
+  for (const root of roots) for (const home of localJavaHomes(root)) {
+    if (seen.has(home)) continue;
+    seen.add(home);
+    if ((await javaMajorVersion(home)) >= 25) return home;
+  }
+  return null;
+}
+async function installPortableJava25() {
+  if (process.platform !== 'win32') throw new Error('Für Minecraft 26.x wird Java 25 benötigt. Die automatische Java-Bereitstellung ist im Windows-Launcher verfügbar.');
+  const existing = await findJava25Home();
+  if (existing) return existing;
+  send('status', { type: 'info', message: 'Java 25 wird einmalig für Minecraft 26.x bereitgestellt …' });
+  const runtimeRoot = javaRuntimeRoot();
+  const archive = path.join(runtimeRoot, 'java-25.zip');
+  ensureDir(runtimeRoot);
+  const response = await fetch(JAVA_25_DOWNLOAD_URL, { redirect: 'follow', signal: AbortSignal.timeout(300000), headers: { 'User-Agent': MODRINTH_USER_AGENT } });
+  if (!response.ok) throw new Error(`Java 25 konnte nicht geladen werden (HTTP ${response.status}). Installiere Java 25 und starte den Launcher erneut.`);
+  const data = Buffer.from(await response.arrayBuffer());
+  if (data.length < 10 * 1024 * 1024 || data.length > 500 * 1024 * 1024) throw new Error('Die heruntergeladene Java-25-Datei ist ungültig oder zu groß.');
+  fs.writeFileSync(archive, data);
+  try {
+    const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    const escapedArchive = archive.replace(/'/g, "''");
+    const escapedRoot = runtimeRoot.replace(/'/g, "''");
+    await execFileAsync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', `Expand-Archive -LiteralPath '${escapedArchive}' -DestinationPath '${escapedRoot}' -Force`], { windowsHide: true, timeout: 180000 });
+  } finally { try { fs.rmSync(archive, { force: true }); } catch (_) {} }
+  const installed = await findJava25Home();
+  if (!installed) throw new Error('Java 25 wurde entpackt, konnte aber nicht geprüft werden. Installiere Java 25 und starte den Launcher erneut.');
+  send('status', { type: 'success', message: 'Java 25 ist bereit und wird für Minecraft 26.x verwendet.' });
+  return installed;
+}
+async function javaPathForVersion(version) {
+  if (!requiresJava25(version)) return null;
+  const home = await findJava25Home() || await installPortableJava25();
+  const binary = javaExecutable(home);
+  if (!exists(binary)) throw new Error('Java 25 wurde nicht gefunden. Starte den Launcher erneut oder installiere Java 25.');
+  send('log', `Minecraft ${version} verwendet Java ${await javaMajorVersion(home) || 25}: ${binary}`);
+  return binary;
+}
 function instanceRoot(version) { return path.join(instancesRoot, version); }
 function modsRoot(version) { return path.join(instanceRoot(version), 'mods'); }
 function resourcePacksRoot(version) { return path.join(instanceRoot(version), 'resourcepacks'); }
@@ -58,7 +135,7 @@ function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.7 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.8 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -801,7 +878,8 @@ ipcMain.handle('launch', async (_event, requestedVersion) => {
     launcher.on('download-status', data => send('progress', data));
     launcher.on('progress', data => send('progress', data));
     send('status', { type: 'info', message: `Starte Vortex Client ${version} mit Fabric …` });
-    minecraftProcess = await launcher.launch({ authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } });
+    const javaPath = await javaPathForVersion(version);
+    minecraftProcess = await launcher.launch({ authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } });
     minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft beendet (Code ${code}).` }); });
     send('status', { type: 'success', message: 'Minecraft wurde mit der Vortex-Fabric-Instanz gestartet.' });
     return { ok: true };
