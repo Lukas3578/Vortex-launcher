@@ -13,6 +13,7 @@
       <nav>
         <button class="nav-link active" data-page="play"><i>◉</i> Play</button>
         <button class="nav-link" data-page="servers"><i>◌</i> Servers</button>
+        <button class="nav-link" data-page="bedrock"><i>▣</i> Bedrock</button>
         <button class="nav-link" data-page="instances"><i>▦</i> Instances</button>
         <button class="nav-link" data-page="cosmetics"><i>✦</i> Cosmetics</button>
         <button class="nav-link" data-page="mods"><i>▤</i> Mod Installer</button>
@@ -23,7 +24,7 @@
       </nav>
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Automatically protected</small></div></section>
       <button class="sidebar-update" id="sidebarUpdate" hidden><span class="sidebar-update-orb">↻</span><span><strong>Client update available</strong><small id="sidebarUpdateText">New version ready</small></span><b>›</b></button>
-      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.15</span></div>
+      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.16</span></div>
     </aside>
 
     <main>
@@ -37,6 +38,12 @@
           <article class="info-card cosmetic-quick"><div class="card-header"><div><p class="eyebrow">COSMETICS WORKSHOP</p><h3>Your Vortex Look</h3></div><button class="icon-button" id="cosmeticsInfoBtn">i</button></div><div class="cosmetic-preview"><span class="cosmetic-shape" id="cosmeticPreview">V</span><div><strong id="cosmeticName">Vortex Cap</strong><p><span id="emblemName">Vortex Cape</span> · Bodyfit cape</p></div></div><button class="text-button" data-page-target="cosmetics">Create a skin variant <span>→</span></button></article>
         </section>
         <section class="activity"><div class="activity-heading"><div><p class="eyebrow">LAUNCHER ACTIVITY</p><h3>System Timeline</h3></div><div class="log-tools"><button class="text-button" id="copyLog">Copy</button><button class="text-button" id="openLaunchLogBtn">Launch Log</button><button class="text-button" id="openCrashLogBtn">Crash Log</button><button class="text-button" id="clearLog">Clear</button></div></div><div class="log" id="log"></div></section>
+      </section>
+
+      <section class="page" id="bedrock">
+        <div class="page-heading bedrock-heading"><p class="eyebrow lime">MINECRAFT FOR WINDOWS</p><h2>Vortex for <span>Bedrock.</span></h2><p>Launch the installed Minecraft for Windows edition directly from Vortex. Bedrock uses your own Microsoft account and is kept fully separate from Java instances.</p></div>
+        <section class="bedrock-hero"><div class="bedrock-emblem">▣</div><div class="bedrock-copy"><p class="eyebrow lime">BEDROCK EDITION</p><h3 id="bedrockTitle">Checking Minecraft for Windows …</h3><p id="bedrockDescription">Vortex is checking whether Minecraft for Windows is installed on this PC.</p><div class="bedrock-meta"><span class="status-pill" id="bedrockStatusPill">CHECKING</span><code id="bedrockVersion" hidden></code></div></div><div class="bedrock-actions"><button class="button primary" id="launchBedrockBtn" disabled>Launch Bedrock</button><button class="button secondary" id="refreshBedrockBtn">Refresh Status</button></div></section>
+        <section class="bedrock-notice"><div><strong>What works in Bedrock</strong><p>Vortex can detect and start Minecraft for Windows. Your Bedrock worlds, Marketplace content, servers and account stay managed by Minecraft for Windows.</p></div><div><strong>What stays Java-only</strong><p>Fabric, the Vortex Client JARs, Java mods, Java resource packs and the Vortex Java Cosmetics workshop are not loaded into Bedrock.</p></div></section>
       </section>
 
       <section class="page" id="servers">
@@ -70,7 +77,7 @@
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource Pack Installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In This Instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>VORTEX CLIENT 0.9.15</span><span id="statusText">Launcher ready</span></footer>
+      <footer><span>VORTEX CLIENT 0.9.16</span><span id="statusText">Launcher ready</span></footer>
     </main>
   </div>
   <div class="news-modal" id="newsModal" hidden role="dialog" aria-modal="true" aria-labelledby="newsModalTitle">

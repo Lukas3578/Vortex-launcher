@@ -44,6 +44,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.16',
+    title: 'Minecraft Bedrock mode',
+    summary: 'Vortex can now detect and launch Minecraft for Windows directly from a dedicated Bedrock page.',
+    items: [
+      'The new Bedrock page checks whether Minecraft for Windows is installed and shows its installed version.',
+      'A direct launcher action opens Bedrock using its registered Windows protocol.',
+      'Bedrock remains separated from Java: Fabric, Vortex Client JARs, Java mods, Java resource packs and Java Cosmetics are not applied to Bedrock.'
+    ]
+  },
+  {
     version: '0.9.15',
     title: 'Vortex Client JAR refresh',
     summary: 'The supplied Vortex Client Fabric JARs are now verified and bundled with their matching Minecraft instances.',
@@ -121,9 +131,38 @@ const RELEASE_NEWS = [
 ];
 
 const JAVA_25_DOWNLOAD_URL = 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse';
+const BEDROCK_PACKAGE_NAME = 'Microsoft.MinecraftUWP';
+const BEDROCK_URI = 'minecraft://';
 
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
 function javaRuntimeRoot() { return path.join(dataRoot, 'runtime', 'java-25'); }
+function windowsPowerShellPath() { return path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'); }
+async function getBedrockState() {
+  if (process.platform !== 'win32') return { supported: false, installed: false, message: 'Minecraft Bedrock can only be started by Vortex on Windows.' };
+  const command = `$ErrorActionPreference = 'SilentlyContinue'; Get-AppxPackage -Name '${BEDROCK_PACKAGE_NAME}' | Select-Object -First 1 Name, PackageFullName, PackageFamilyName, Version, InstallLocation | ConvertTo-Json -Compress`;
+  try {
+    const result = await execFileAsync(windowsPowerShellPath(), ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command], { windowsHide: true, timeout: 12000, maxBuffer: 1024 * 1024 });
+    const raw = String(result.stdout || '').trim();
+    if (!raw) return { supported: true, installed: false, message: 'Minecraft for Windows was not found.' };
+    const packageInfo = JSON.parse(raw);
+    if (!packageInfo || packageInfo.Name !== BEDROCK_PACKAGE_NAME) return { supported: true, installed: false, message: 'Minecraft for Windows was not found.' };
+    return { supported: true, installed: true, packageFamilyName: String(packageInfo.PackageFamilyName || ''), version: String(packageInfo.Version || ''), message: 'Minecraft for Windows is ready to launch.' };
+  } catch (_) {
+    return { supported: true, installed: false, message: 'Minecraft for Windows could not be detected.' };
+  }
+}
+async function launchBedrock() {
+  const state = await getBedrockState();
+  if (!state.supported) return { ok: false, ...state };
+  if (!state.installed) return { ok: false, ...state, error: 'Install Minecraft for Windows before launching Bedrock.' };
+  try {
+    await shell.openExternal(BEDROCK_URI);
+    send('status', { type: 'success', message: 'Minecraft Bedrock launch request sent.' });
+    return { ok: true, ...state };
+  } catch (error) {
+    return { ok: false, ...state, error: `Minecraft Bedrock could not be started: ${error.message || error}` };
+  }
+}
 function requiresJava25(version) { return /^26\./.test(String(version || '')); }
 // minecraft-launcher-core first calls the supplied path with `-version`.
 // Therefore Windows must use java.exe rather than the silent javaw.exe.
@@ -275,7 +314,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.15 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.16 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -995,8 +1034,10 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
+ipcMain.handle('get-bedrock-state', () => getBedrockState());
+ipcMain.handle('launch-bedrock', () => launchBedrock());
 ipcMain.handle('refresh-server-status', async (_event, id, force = false) => {
   try { return await refreshServerStatus(id, Boolean(force)); }
   catch (error) { return { ok: false, error: error.message || 'Minecraft status could not be updated.' }; }
