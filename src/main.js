@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -6,6 +6,7 @@ const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
 const { Auth } = require('msmc');
 const { autoUpdater } = require('electron-updater');
+const { createAiStudio } = require('./ai-studio');
 
 const FIXED_MEMORY = { min: '2G', max: '4G' };
 const SUPPORTED_VERSIONS = ['1.21.11', '26.1.1', '26.1.2', '26.2'];
@@ -25,6 +26,7 @@ const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
 const instancesRoot = path.join(dataRoot, 'instances');
 const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
+const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
 function instanceRoot(version) { return path.join(instancesRoot, version); }
@@ -53,7 +55,7 @@ function applyWebsiteCapeChoice(version) { const choice = loadJson(websiteCapeCh
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.8.1 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.0 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -658,7 +660,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.8.1' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.9.0' };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -683,6 +685,13 @@ app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instan
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, community: await getCommunityState() }));
+ipcMain.handle('ai-get-state', () => aiStudio.getState());
+ipcMain.handle('ai-save-key', (_event, key, textModel) => { try { return { ok: true, state: aiStudio.saveKey(key, textModel) }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-remove-key', () => ({ ok: true, state: aiStudio.removeKey() }));
+ipcMain.handle('ai-generate-skin', async (_event, prompt) => { try { const result = await aiStudio.generateSkin(prompt); const state = loadState(); result.profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, result.path, state.hat || 'vortex-cap', state.emblem || 'vortex-crest'); send('status', { type: 'success', message: `KI-Skin „${result.design.title}“ wurde lokal erstellt.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-generate-cape', async (_event, prompt) => { try { const result = await aiStudio.generateCape(prompt); send('status', { type: 'success', message: `KI-Cape „${result.design.title}“ wurde lokal für ${result.instances} Instanz(en) gespeichert.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-create-mod-project', async (_event, prompt) => { try { const result = await aiStudio.createModProject(prompt); send('status', { type: 'success', message: `Private Mod-Projektvorlage „${result.design.title}“ wurde lokal erstellt.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-open-output', (_event, kind) => { const folder = aiStudio.openOutputFolder(kind); return shell.openPath(folder); });
 ipcMain.handle('open-launch-log', () => { if (!exists(launchLogPath())) return { ok: false, error: 'Es wurde noch kein Launcher-Protokoll erstellt.' }; shell.showItemInFolder(launchLogPath()); return { ok: true }; });
 ipcMain.handle('open-crash-log', () => { if (!exists(crashLogPath())) return { ok: false, error: 'Es wurde noch kein Fehlerprotokoll erstellt.' }; shell.showItemInFolder(crashLogPath()); return { ok: true }; });
 ipcMain.handle('get-website-cape-catalogue', async () => { try { return { ok: true, capes: await loadWebsiteCapeCatalogue(), choice: loadJson(websiteCapeChoiceFile(), { cape: null }) }; } catch (error) { return { ok: false, capes: [], choice: loadJson(websiteCapeChoiceFile(), { cape: null }), error: error.message }; } });
