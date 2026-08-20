@@ -4,7 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
-const { Auth } = require('msmc');
+const { Auth, tokenUtils } = require('msmc');
 const { autoUpdater } = require('electron-updater');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
@@ -38,11 +38,23 @@ const stateFile = path.join(dataRoot, 'launcher-state.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
 const serversFile = path.join(dataRoot, 'servers.json');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
+const modImagesRoot = path.join(dataRoot, 'mod-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.17',
+    title: 'Session, mod artwork & cosmetics repair',
+    summary: 'Java sessions are refreshed before launch, installed Modrinth mods now show cached artwork, and the full Vortex 3D cosmetics renderer is restored.',
+    items: [
+      'Minecraft Microsoft sessions are refreshed before every Java launch; legacy accounts without a refresh token are guided through one reauthentication.',
+      'Installed Modrinth mods are matched by file hash and display locally cached project artwork in both mod views.',
+      'The launcher UI and runtime strings were checked again for English consistency, including number formatting.',
+      'The 1.21.11 Vortex Cosmetics bundle restores 3D hats, animated capes and Elytra rendering. An active Vortex cape now locally replaces the visible vanilla cape instead of drawing both.'
+    ]
+  },
   {
     version: '0.9.16',
     title: 'Minecraft Bedrock mode',
@@ -314,7 +326,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.16 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.17 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -346,7 +358,8 @@ async function getProjectMetadata(projectId) {
   if (projectMetadataCache.has(key)) return projectMetadataCache.get(key);
   try {
     const project = await modrinthJson(`${MODRINTH_API}/project/${encodeURIComponent(key)}`);
-    const metadata = { projectId: key, title: project.title || '', author: project.author || '', iconUrl: /^https:\/\/cdn\.modrinth\.com\//i.test(project.icon_url || '') ? project.icon_url : null };
+    const iconUrl = validModrinthIconUrl(project.icon_url) ? project.icon_url : null;
+    const metadata = { projectId: key, title: project.title || '', author: project.author || '', iconUrl, iconData: iconUrl ? await cachedModIconData(key, iconUrl) : null };
     projectMetadataCache.set(key, metadata);
     return metadata;
   } catch (_) { projectMetadataCache.set(key, null); return null; }
@@ -366,6 +379,31 @@ function removeProjectMappingForFile(version, fileName) {
     if (projectRecordFileName(record) === baseName) { delete projects[projectId]; changed = true; }
   }
   if (changed) writeJson(installedProjectsFile(version), projects);
+}
+function sha1ForModFile(file) {
+  try {
+    const stat = fs.statSync(file);
+    if (!stat.isFile() || !stat.size || stat.size > 100 * 1024 * 1024) return null;
+    return crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex');
+  } catch (_) { return null; }
+}
+async function mapInstalledModrinthFile(version, fileName) {
+  const baseName = String(fileName || '').replace(/\.disabled$/i, '');
+  const known = mappedProjectForFile(version, baseName);
+  if (known) return known;
+  const hash = sha1ForModFile(path.join(modsRoot(version), baseName));
+  if (!hash) return null;
+  try {
+    const release = await modrinthJson(`${MODRINTH_API}/version_file/${hash}?algorithm=sha1`);
+    const projectId = String(release?.project_id || '');
+    if (!projectId) return null;
+    const metadata = await getProjectMetadata(projectId);
+    const projects = installedProjectMap(version);
+    for (const [knownProjectId, record] of Object.entries(projects)) if (projectRecordFileName(record) === baseName && knownProjectId !== projectId) delete projects[knownProjectId];
+    projects[projectId] = { fileName: baseName, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null };
+    writeJson(installedProjectsFile(version), projects);
+    return { projectId, record: projects[projectId] };
+  } catch (_) { return null; }
 }
 function selectCompatibleModVersion(versions, gameVersion) {
   const usable = (versions || []).filter(entry => Array.isArray(entry.game_versions) && entry.game_versions.includes(gameVersion) && Array.isArray(entry.loaders) && entry.loaders.includes('fabric') && !MODRINTH_UNUSABLE_STATUSES.has(entry.status) && selectPrimaryJar(entry.files));
@@ -500,7 +538,9 @@ async function downloadModrinthMod(gameVersion, requested = {}) {
   if (buffer.length > 100 * 1024 * 1024) throw new Error('The downloaded file is larger than 100 MB.');
   if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The mod file checksum does not match.'); }
   fs.writeFileSync(target, buffer);
-  return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
+  const projectId = String(requested.projectId || version.project_id || '');
+  if (projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null }; writeJson(installedProjectsFile(normalizedVersion), projects); }
+  return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: projectId || null };
 }
 async function communityCookieHeader() {
   const cookies = await session.defaultSession.cookies.get({ url: COMMUNITY_BASE_URL });
@@ -613,6 +653,23 @@ async function downloadUpdate() {
 function accountId(value = {}) { const uuid = String(value.uuid || '').trim().toLowerCase(); return uuid || `name:${String(value.username || '').trim().toLowerCase()}`; }
 function profileImagePath(value) { const file = String(value?.profileImage || ''); return /^[a-z0-9][a-z0-9._-]{0,100}\.(png|jpe?g|webp)$/i.test(file) ? path.join(profileImagesRoot, file) : null; }
 function dataUriForImage(file) { if (!file || !exists(file)) return null; const size = fs.statSync(file).size; if (!size || size > 5 * 1024 * 1024) return null; const extension = path.extname(file).toLowerCase(); const type = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'; return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`; }
+function validModrinthIconUrl(value) { try { const url = new URL(String(value || '')); return url.protocol === 'https:' && url.hostname === 'cdn.modrinth.com'; } catch (_) { return false; } }
+function modIconFile(projectId, extension = '.png') { return path.join(modImagesRoot, `modrinth-${safeFileName(projectId)}${extension}`); }
+async function cachedModIconData(projectId, iconUrl) {
+  const key = safeFileName(projectId);
+  if (!key || !validModrinthIconUrl(iconUrl)) return null;
+  for (const extension of ['.png', '.jpg', '.webp']) { const cached = dataUriForImage(modIconFile(key, extension)); if (cached) return cached; }
+  try {
+    const response = await fetch(iconUrl, { headers: { Accept: 'image/png,image/jpeg,image/webp' }, signal: AbortSignal.timeout(15000) });
+    const contentType = String(response.headers.get('content-type') || '').split(';')[0].toLowerCase();
+    const extension = contentType === 'image/png' ? '.png' : contentType === 'image/webp' ? '.webp' : contentType === 'image/jpeg' ? '.jpg' : null;
+    if (!response.ok || !extension) return null;
+    const image = Buffer.from(await response.arrayBuffer());
+    if (!image.length || image.length > 3 * 1024 * 1024) return null;
+    ensureDir(modImagesRoot); const file = modIconFile(key, extension); fs.writeFileSync(file, image);
+    return dataUriForImage(file);
+  } catch (_) { return null; }
+}
 function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft Player'), uuid: String(value?.uuid || ''), hasCustomProfileImage: Boolean(dataUriForImage(profileImagePath(value))) }; }
 function avatarFromMinecraftSkin(skin) {
   const avatar = new PNG({ width: 64, height: 64 });
@@ -669,6 +726,34 @@ function saveAccount(value) {
   account = value;
   saveAccounts();
   return account;
+}
+async function signInToMinecraft() {
+  const authManager = new Auth('select_account');
+  const xboxManager = await authManager.launch('electron', { width: 520, height: 720, resizable: false });
+  const token = await xboxManager.getMinecraft();
+  const profile = token.profile || {};
+  const signedIn = saveAccount({ username: profile.name || 'Minecraft player', uuid: profile.id || '', auth: token.mclc(true) });
+  return signedIn;
+}
+async function refreshMinecraftAuthorization(savedAccount) {
+  const previous = savedAccount?.auth;
+  const refreshToken = previous?.meta?.refresh;
+  if (!previous?.access_token || !refreshToken) {
+    send('status', { type: 'info', message: 'Your saved Minecraft session needs a one-time reauthentication …' });
+    return (await signInToMinecraft()).auth;
+  }
+  try {
+    const authManager = new Auth('select_account');
+    const minecraft = await tokenUtils.fromMclcToken(authManager, previous, true);
+    const profile = minecraft?.profile || {};
+    const refreshedAuth = minecraft?.mclc?.(true);
+    if (!refreshedAuth?.access_token || !refreshedAuth?.meta?.refresh || !profile?.id) throw new Error('The refreshed Minecraft session is incomplete.');
+    const refreshedAccount = { ...savedAccount, username: profile.name || savedAccount.username, uuid: profile.id || savedAccount.uuid, auth: refreshedAuth };
+    saveAccount(refreshedAccount);
+    return refreshedAuth;
+  } catch (error) {
+    throw new Error(`Minecraft session refresh failed. Sign in again to continue. (${error.message || error})`);
+  }
 }
 function selectAccount(id) {
   const selected = accounts.find(entry => accountId(entry) === String(id || ''));
@@ -1095,7 +1180,7 @@ ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = 
 ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
 ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics skins are only available for 1.21.11.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
-ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = mappedProjectForFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? (stored?.iconUrl ? stored : await getProjectMetadata(mapping.projectId)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl: metadata?.iconUrl || null, title: metadata?.title || null, author: metadata?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
+ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
 ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
 ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be disabled.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'The mod file was not found.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'The target file already exists.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });
 ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
@@ -1150,13 +1235,9 @@ ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { 
 ipcMain.handle('login', async () => {
   try {
     send('status', { type: 'info', message: 'Opening Microsoft sign-in…' });
-    const authManager = new Auth('select_account');
-    const xboxManager = await authManager.launch('electron', { width: 520, height: 720, resizable: false });
-    const token = await xboxManager.getMinecraft();
-    const profile = token.profile || {};
-    saveAccount({ username: profile.name || 'Minecraft player', uuid: profile.id || '', auth: token.mclc() });
-    send('status', { type: 'success', message: `Signed in as ${account.username}. ${accounts.length} account(s) saved.` });
-    return { ok: true, account: accountSummary(account), accounts: accountSummaries() };
+    const signedIn = await signInToMinecraft();
+    send('status', { type: 'success', message: `Signed in as ${signedIn.username}. ${accounts.length} account(s) saved.` });
+    return { ok: true, account: accountSummary(signedIn), accounts: accountSummaries() };
   } catch (error) { send('status', { type: 'error', message: `Sign-in failed: ${error.message}` }); return { ok: false, error: error.message }; }
 });ipcMain.handle('select-account', (_event, id) => { const selected = selectAccount(id); if (!selected) return { ok: false, error: 'The stored account was not found.' }; send('status', { type: 'success', message: `Active account: ${selected.username}` }); return { ok: true, account: accountSummary(selected), accounts: accountSummaries() }; });
 ipcMain.handle('remove-account', (_event, id) => { const removed = removeAccount(id); if (!removed) return { ok: false, error: 'The stored account was not found.' }; send('status', { type: 'info', message: `${removed.username} was removed from the launcher.` }); return { ok: true, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
@@ -1169,6 +1250,8 @@ ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = nu
   if (requestedServerId && !server) return { ok: false, error: 'The selected server was not found.' };
   if (minecraftProcess) return { ok: false, error: 'Minecraft is already running.' };
   try {
+    send('status', { type: 'info', message: 'Refreshing Minecraft session …' });
+    const authorization = await refreshMinecraftAuthorization(account);
     const instance = await ensureInstance(version);
     const launcher = new Client();
     launcher.on('debug', message => send('log', String(message)));
@@ -1177,7 +1260,7 @@ ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = nu
     launcher.on('progress', data => send('progress', data));
     send('status', { type: 'info', message: server ? `Starting ${server.name} (${server.address}) with Vortex Client ${version} …` : `Starting Vortex Client ${version} with Fabric …` });
     const javaPath = await javaPathForVersion(version);
-    const options = { authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } };
+    const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } };
     if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
     minecraftProcess = await launcher.launch(options);
     minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft exited (Code ${code}).` }); });
