@@ -45,6 +45,15 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.18',
+    title: 'Simple Voice Chat is no longer removed',
+    summary: 'Simple Voice Chat can now remain in every Vortex Fabric instance after installation.',
+    items: [
+      'Removed the obsolete maintenance rule that deleted files with voice-chat names.',
+      'Simple Voice Chat and other compatible Fabric mods now stay in the instance mods folder after download and during automatic maintenance.'
+    ]
+  },
+  {
     version: '0.9.17',
     title: 'Session, mod artwork & cosmetics repair',
     summary: 'Java sessions are refreshed before launch, installed Modrinth mods now show cached artwork, and the full Vortex 3D cosmetics renderer is restored.',
@@ -326,7 +335,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.17 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.18 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -831,15 +840,9 @@ function copyIfChanged(source, destination) {
   }
   return false;
 }
-function removeVoiceChat(modsDir) {
-  if (!exists(modsDir)) return 0;
-  let count = 0;
-  for (const name of fs.readdirSync(modsDir)) if (/voice.?chat/i.test(name)) { fs.rmSync(path.join(modsDir, name), { force: true }); count += 1; }
-  return count;
-}
 function bundledModFiles(version) {
   const dir = path.join(assetsRoot(), 'modpacks', version);
-  return exists(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.jar') && !/voice.?chat/i.test(name)) : [];
+  return exists(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.jar')) : [];
 }
 function isProtectedCosmeticsMod(name) { return /^vortexclient.*\.jar$/i.test(name); }
 function mandatoryModNames(version) { return new Set(bundledModFiles(version)); }
@@ -860,10 +863,9 @@ function hasFabricProfile(version) {
 }
 function maintainBundledMods(version) {
   const normalized = sanitizeVersion(version);
-  if (!normalized) return { installed: 0, removedVoice: 0, replaced: 0 };
+  if (!normalized) return { installed: 0, replaced: 0 };
   const mods = modsRoot(normalized);
   ensureDir(mods);
-  const removedVoice = removeVoiceChat(mods);
   const replaced = cleanReplacedVortexJars(normalized, mods);
   applyWebsiteCapeChoice(normalized);
   let installed = 0;
@@ -871,7 +873,7 @@ function maintainBundledMods(version) {
   for (const name of bundledModFiles(normalized)) {
     if (copyIfChanged(path.join(bundleDir, name), path.join(mods, name))) installed += 1;
   }
-  return { installed, removedVoice, replaced };
+  return { installed, replaced };
 }
 async function maintainInstancesSilently() {
   if (instanceMaintenanceRunning) return;
@@ -887,13 +889,12 @@ async function maintainInstancesSilently() {
         try { await installFabricProfile(version, instanceRoot(version)); fabricInstalled = true; }
         catch (error) { send('log', `Fabric check for ${version} will be retried: ${error.message}`); }
       }
-      if (repair.installed || repair.removedVoice || repair.replaced || fabricInstalled) {
+      if (repair.installed || repair.replaced || fabricInstalled) {
         repairedVersions.push(version);
         const details = [];
-        if (repair.installed) details.push(`${repair.installed} required file(s) restored`);
+        if (repair.installed) details.push(`${repair.installed} bundled mod(s) repaired`);
         if (fabricInstalled) details.push('Fabric profile restored');
         if (repair.replaced) details.push('modified Vortex files replaced');
-        if (repair.removedVoice) details.push('unauthorized voice chat files removed');
         send('status', { type: 'success', message: `Instance maintenance ${version}: ${details.join(', ')}.` });
       }
     }
@@ -967,8 +968,7 @@ async function ensureInstance(version) {
   ensureDir(mods);
   ensureDir(vortexConfigRoot(normalized));
   send('status', { type: 'info', message: `Checking Vortex instance ${normalized}…` });
-  const { installed, removedVoice, replaced } = maintainBundledMods(normalized);
-  if (removedVoice) send('log', `Removed unwanted voice chat files from ${normalized}.`);
+  const { installed, replaced } = maintainBundledMods(normalized);
   if (replaced) send('log', `Replaced outdated Vortex core mod files in ${normalized}.`);
   const cosmeticState = loadState();
   const protectedCosmetics = [...protectedModNames(normalized)];
@@ -984,7 +984,7 @@ async function ensureInstance(version) {
   send('status', { type: 'info', message: `Preparing Fabric for ${normalized}…` });
   const fabric = await installFabricProfile(normalized, root);
   send('status', { type: 'success', message: `Instance ${normalized} ready: Fabric ${fabric.loaderVersion}, ${bundledModFiles(normalized).length} required mods verified.` });
-  return { ...getInstanceSummary(normalized), installed, removedVoice, replaced, fabric };
+  return { ...getInstanceSummary(normalized), installed, replaced, fabric };
 }
 
 function writePixel(png, x, y, color) {

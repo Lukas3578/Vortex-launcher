@@ -9,8 +9,8 @@ const html = read('src/index.html');
 const css = read('src/styles.css');
 
 const checks = [
-  ['v0.9.17 package version', packageJson.version === '0.9.17'],
-  ['v0.9.17 visible build', html.includes('BUILD 0.9.17') && html.includes('VORTEX CLIENT 0.9.17') && renderer.includes('Launcher 0.9.17 ready')],
+  ['v0.9.18 package version', packageJson.version === '0.9.18'],
+  ['v0.9.18 visible build', html.includes('BUILD 0.9.18') && html.includes('VORTEX CLIENT 0.9.18') && renderer.includes('Launcher 0.9.18 ready')],
   ['refreshable sign-in token', main.includes('auth: token.mclc(true)')],
   ['pre-launch session refresh', main.includes('const authorization = await refreshMinecraftAuthorization(account);') && main.includes('authorization, root: instance.root')],
   ['legacy session reauthentication', main.includes('one-time reauthentication') && main.includes('return (await signInToMinecraft()).auth')],
@@ -21,6 +21,8 @@ const checks = [
   ['installed views use cached artwork', renderer.includes('mod.iconData') && renderer.includes('installed-row-art')],
   ['English number formatting', !renderer.includes("toLocaleString('de-DE')") && renderer.includes("toLocaleString('en-GB')")],
   ['English CSS comments', !css.includes('Automatische Wartung') && !css.includes('Mehrfachkonto-Verwaltung')],
+  ['Simple Voice Chat is not removed', !main.includes('function removeVoiceChat') && !main.includes('unauthorized voice chat files removed') && !main.includes('Removed unwanted voice chat files')],
+  ['Voice Chat is not excluded from bundles', main.includes("filter(name => name.endsWith('.jar'))") && !main.includes("name.endsWith('.jar') && !/voice.?chat/i.test(name)")],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);
