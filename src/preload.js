@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
   getAiState: () => ipcRenderer.invoke('ai-get-state'),
-  saveAiKey: (key, textModel) => ipcRenderer.invoke('ai-save-key', key, textModel),
+  saveAiKey: (key, provider, textModel) => ipcRenderer.invoke('ai-save-key', key, provider, textModel),
   removeAiKey: () => ipcRenderer.invoke('ai-remove-key'),
   generateAiSkin: (prompt) => ipcRenderer.invoke('ai-generate-skin', prompt),
   generateAiCape: (prompt) => ipcRenderer.invoke('ai-generate-cape', prompt),
