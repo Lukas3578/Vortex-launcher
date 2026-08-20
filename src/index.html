@@ -22,7 +22,7 @@
       </nav>
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Automatisch geschützt</small></div></section>
       <button class="sidebar-update" id="sidebarUpdate" hidden><span class="sidebar-update-orb">↻</span><span><strong>Client-Update verfügbar</strong><small id="sidebarUpdateText">Neue Version bereit</small></span><b>›</b></button>
-      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.6</span></div>
+      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.7</span></div>
     </aside>
 
     <main>
@@ -57,16 +57,25 @@
 
       <section class="page" id="overview"><div class="page-heading"><p class="eyebrow">SELECTED VERSION</p><h2>Installed mods <span class="instance-badge" id="ovInstance">—</span></h2><p>Everything in this instance. One click on the switch turns a mod off or back on — the file stays where it is.</p></div><div class="overview-totals" id="overviewTotals"></div><div id="overviewList" class="mod-results"></div></section>
 
-      <section class="page" id="updates"><div class="page-heading"><p class="eyebrow">VORTEX CLIENT · WARTUNG</p><h2>Launcher aktuell halten.</h2><p>Prüfe neue Versionen, lade sie sicher herunter und installiere sie direkt aus diesem Fenster. Deine Minecraft-Instanzen bleiben dabei erhalten.</p></div><article class="update-window"><div class="update-window-header"><div class="update-orb">↻</div><div><p class="eyebrow">VORTEX UPDATE CENTER</p><h3>Alles auf dem neuesten Stand.</h3><p class="update-subtitle">GitHub Release-Kanal · automatische Update-Dateien</p></div><span class="status-pill" id="updateBadge">Bereit</span></div><div class="update-version-grid"><div class="update-version-box"><span>INSTALLIERT</span><strong id="currentVersion">—</strong></div><div class="update-version-arrow">→</div><div class="update-version-box next"><span>VERFÜGBAR</span><strong id="availableVersion">—</strong></div></div><div class="update-status-row"><p class="update-status" id="updateStatus">Noch nicht auf Updates geprüft.</p><strong id="updateProgressValue">0 %</strong></div><div class="update-progress"><div id="updateProgressBar"></div></div><div class="update-actions"><button class="button secondary" id="checkUpdateBtn">Nach Updates suchen</button><button class="button secondary" id="downloadUpdateBtn" disabled>Download starten</button><button class="button primary" id="installUpdateBtn" disabled>Jetzt installieren</button></div><div class="update-tip"><span>i</span><p>Beim Installieren wird der Launcher kurz neu gestartet. Eigene Mods, Resource Packs, Cosmetics und Instanzen werden nicht gelöscht.</p></div></article></section>
-
       <section class="page" id="mods"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Mod installer</h2><p>Type a name. The build that matches your selected Minecraft version and Fabric is picked automatically.</p></div><div class="mod-search-bar"><input type="text" id="modQuery" placeholder="e.g. voice chat, sodium, minimap" autocomplete="off" /><button class="button" id="modSearchBtn">Search</button><span class="mod-scope" id="modScope">for —</span></div><div id="modResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In this instance</h3><button class="text-button" id="toggleInstalled">Collapse</button></div><div id="installedMods" class="installed-list"></div></section></section>
 
       <section class="page" id="community"><div class="page-heading"><p class="eyebrow">VORTEX COMMUNITY</p><h2>Presets und Makros teilen.</h2><p>Nach deiner Launcher-Anmeldung findest du hier die Community-Galerie. Für eigene Beiträge meldest du dich einmalig mit deinem bestehenden Website-Konto an.</p></div><article class="community-account-card"><div class="community-account-copy"><span class="community-orb">☍</span><div><strong id="communityAccountTitle">Community-Login erforderlich</strong><p id="communityAccountText">Melde dich mit deinem Vortex-Website-Konto an, um Presets und Makros hochzuladen.</p></div></div><div class="community-actions"><button class="button secondary" id="communityLoginBtn">Community anmelden</button><button class="button primary" id="communityUploadBtn" disabled>Preset oder Makro hochladen</button></div></article><section class="community-gallery"><div class="section-title"><h3>Community-Beiträge</h3><button class="text-button" id="refreshCommunityBtn">Aktualisieren</button></div><div id="communityPresetGrid" class="community-preset-grid"><p class="mod-empty">Community wird geladen …</p></div></section></section>
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource-Pack installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In this instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>VORTEX CLIENT 0.9.6</span><span id="statusText">Launcher bereit</span></footer>
+      <footer><span>VORTEX CLIENT 0.9.7</span><span id="statusText">Launcher bereit</span></footer>
     </main>
+  </div>
+  <div class="update-modal" id="updateModal" hidden role="dialog" aria-modal="true" aria-labelledby="updateModalTitle">
+    <div class="update-modal-card">
+      <div class="update-modal-icon">↻</div>
+      <p class="eyebrow">VORTEX CLIENT UPDATE</p>
+      <h2 id="updateModalTitle">Update verfügbar</h2>
+      <p id="updateModalText">Eine neue Launcher-Version ist bereit.</p>
+      <div class="update-modal-progress" id="updateModalProgress" hidden><div><span>Wird heruntergeladen</span><strong id="updateModalProgressValue">0 %</strong></div><div class="update-progress"><div id="updateModalProgressBar"></div></div></div>
+      <p class="update-modal-note" id="updateModalNote">Nach dem Update wird der Launcher automatisch neu gestartet. Deine Instanzen und Dateien bleiben erhalten.</p>
+      <div class="update-modal-actions"><button class="button ghost" id="updateLaterBtn">Später</button><button class="button primary" id="updateActionBtn">Jetzt aktualisieren</button></div>
+    </div>
   </div>
   <script src="renderer.js"></script>
 </body>
