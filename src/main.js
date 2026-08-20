@@ -44,57 +44,68 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.13',
-    title: 'Serverkarten korrigiert',
-    summary: 'Server-Favicons erscheinen jetzt dezent; die störende riesige Buchstabenanzeige wurde entfernt.',
+    version: '0.9.14',
+    title: 'Smoother Logs & Full English UI',
+    summary: 'The launcher interface and runtime messages are now consistently English, with a more readable system timeline.',
     items: [
-      'Das echte Minecraft-Server-Favicon wird klein in der oberen rechten Ecke der Karte angezeigt.',
-      'Der großflächige Buchstaben-Platzhalter und seine CSS-Regel wurden vollständig entfernt.',
-      'Server ohne Favicon zeigen nur noch den ruhigen, neutralen Kartenhintergrund.'
+      'The refreshed system timeline shows timestamps with seconds, smooth scrolling and clear status colours.',
+      'Repeated messages are grouped with a counter to keep launch details readable.',
+      'Navigation, dialogs, status text, update messages, server messages and AI Studio text are now in English.',
+      'The current Cosmetics implementation remains unchanged; no Cosmetics were transferred from the older launcher.'
+    ]
+  },
+  {
+    version: '0.9.13',
+    title: 'Server cards fixed',
+    summary: 'Server favicons now appear subtly; the annoying large letter placeholder has been removed.',
+    items: [
+      'The real Minecraft server favicon is now displayed small in the top-right corner of the card.',
+      'The large letter placeholder and its CSS rule have been completely removed.',
+      'Servers without a favicon now show only the calm, neutral card background.'
     ]
   },
   {
     version: '0.9.12',
-    title: 'Echte Serverdaten & Website-Cape',
-    summary: 'Die Server-Galerie liest jetzt direkt aus Minecraft; eine bestätigte Website-Anmeldung schaltet das Vortex Member Cape frei.',
+    title: 'Real server data & website cape',
+    summary: 'The server gallery now reads directly from Minecraft; a confirmed website login unlocks the Vortex Member Cape.',
     items: [
-      'Serverkarten laden das echte Minecraft-Favicon, die MOTD, die Version und die aktuelle Spielerzahl direkt vom jeweiligen Server.',
-      'Eigene Beschreibungen und lokale Serverbilder wurden entfernt: Die sichtbaren Daten können nicht mehr manuell verändert werden.',
-      'Minecraft-SRV-Einträge werden berücksichtigt, damit Domains mit einem abweichenden Serverport zuverlässig angezeigt werden.',
-      'Nach der Anmeldung mit einem Vortex-Website-Konto wird das exklusive Vortex Member Cape sicher freigeschaltet und lokal für deine Instanzen installiert.'
+      'Server cards load the real Minecraft favicon, the MOTD, the version, and the current player count directly from each server.',
+      'Custom descriptions and local server images have been removed: visible data can no longer be manually edited.',
+      'Minecraft SRV entries are respected so domains using a different server port are displayed correctly.',
+      'After logging in with a Vortex website account, the exclusive Vortex Member Cape is securely unlocked and installed locally for your instances.'
     ]
   },
   {
     version: '0.9.11',
-    title: 'Visuelle Server-Galerie',
-    summary: 'Serverkarten zeigen jetzt Bilder und Beschreibungen statt nur einer IP-Adresse.',
+    title: 'Visual server gallery',
+    summary: 'Server cards now show images and descriptions instead of just an IP address.',
     items: [
-      'VortexPvP erhält ein eigenes lokales Vortex-Banner im Stil der offiziellen Website.',
-      'Eigene Serverkarten zeigen Name, IP, Beschreibung und ein frei wählbares lokales Bild.',
-      'Serverbilder werden ausschließlich lokal im Vortex-Datenordner gespeichert und lassen sich jederzeit ändern.',
-      'Die Server-Bibliothek wurde zu einer übersichtlichen visuellen Karten-Galerie überarbeitet.'
+      'VortexPvP receives its own local Vortex banner in the style of the official website.',
+      'Custom server cards show name, IP, description, and an optionally chosen local image.',
+      'Server images are stored locally in the Vortex data folder only and can be changed at any time.',
+      'The server library has been redesigned into a clear visual card gallery.'
     ]
   },
   {
     version: '0.9.10',
-    title: 'Server-Bibliothek & Direct-Join',
-    summary: 'Server verwalten und direkt über deine Vortex-Instanz beitreten.',
+    title: 'Server library & direct-join',
+    summary: 'Manage servers and join directly using your Vortex instance.',
     items: [
-      'Neue Server-Seite zum Speichern, Auswählen und Entfernen eigener Minecraft-Server.',
-      'Direkter Mehrspielerstart: Ein Klick auf „Beitreten“ startet Minecraft mit der ausgewählten Server-IP.',
-      'Mc.VortexPvP.Eu ist als offizieller VortexPvP-Server immer sichtbar und bleibt dauerhaft verfügbar.',
-      'Überarbeitete Spielseite mit einem schnellen VortexPvP-Beitrittsknopf und klareren Startzuständen.'
+      'New server page to save, select, and remove your own Minecraft servers.',
+      'Direct multiplayer start: one click on "Join" launches Minecraft with the selected server IP.',
+      'mc.vortexpvp.eu is always visible as the official VortexPvP server and remains permanently available.',
+      'Reworked game page with a quick VortexPvP join button and clearer launch states.'
     ]
   },
   {
     version: '0.9.9',
-    title: 'Neuigkeiten & Profil-Update',
-    summary: 'Nach jedem Launcher-Update siehst du nun gesammelt, was neu ist.',
+    title: 'News & profile update',
+    summary: 'After each launcher update you now see what\'s new in one place.',
     items: [
-      'Neue „Neu in dieser Version“-Ansicht mit allen Änderungen seit deinem letzten Update.',
-      'Überarbeitete Konto-Karte oben rechts mit Microsoft-Avatar und persönlichem Profilbild.',
-      'Profilbild kann lokal ausgewählt, geändert oder wieder entfernt werden.',
-      'Klarere Update-Kommunikation mit einem einfachen Aktualisieren-und-neu-starten-Ablauf.'
+      'New "What\'s new in this version" view with all changes since your last update.',
+      'Reworked account card in the top-right with Microsoft avatar and personal profile image.',
+      'Profile image can be selected locally, changed, or removed.',
+      'Clearer update communication with a simple update-and-restart flow.'
     ]
   }
 ];
@@ -104,8 +115,8 @@ const JAVA_25_DOWNLOAD_URL = 'https://api.adoptium.net/v3/binary/latest/25/ga/wi
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
 function javaRuntimeRoot() { return path.join(dataRoot, 'runtime', 'java-25'); }
 function requiresJava25(version) { return /^26\./.test(String(version || '')); }
-// minecraft-launcher-core ruft den übergebenen Pfad zuerst mit `-version` auf.
-// Daher muss unter Windows java.exe (nicht das stille javaw.exe) verwendet werden.
+// minecraft-launcher-core first calls the supplied path with `-version`.
+// Therefore Windows must use java.exe rather than the silent javaw.exe.
 function javaExecutable(home) { return path.join(home, 'bin', process.platform === 'win32' ? 'java.exe' : 'java'); }
 function javaConsoleExecutable(home) { return javaExecutable(home); }
 function localJavaHomes(root) {
@@ -121,7 +132,7 @@ async function javaMajorVersion(home) {
   try {
     const result = await execFileAsync(binary, ['-version'], { windowsHide: true, timeout: 10000 });
     const output = `${result.stdout || ''}\n${result.stderr || ''}`;
-    const match = output.match(/version\s+\"(?:1\.)?(\d+)/i) || output.match(/openjdk\s+(\d+)/i);
+    const match = output.match(/version\s+"(?:1\.)?(\d+)/i) || output.match(/openjdk\s+(\d+)/i);
     return match ? Number(match[1]) : null;
   } catch (_) { return null; }
 }
@@ -142,17 +153,17 @@ async function findJava25Home() {
   return null;
 }
 async function installPortableJava25() {
-  if (process.platform !== 'win32') throw new Error('Für Minecraft 26.x wird Java 25 benötigt. Die automatische Java-Bereitstellung ist im Windows-Launcher verfügbar.');
+  if (process.platform !== 'win32') throw new Error('Minecraft 26.x requires Java 25. Automatic Java provisioning is available in the Windows launcher.');
   const existing = await findJava25Home();
   if (existing) return existing;
-  send('status', { type: 'info', message: 'Java 25 wird einmalig für Minecraft 26.x bereitgestellt …' });
+  send('status', { type: 'info', message: 'Java 25 is being provisioned for Minecraft 26.x …' });
   const runtimeRoot = javaRuntimeRoot();
   const archive = path.join(runtimeRoot, 'java-25.zip');
   ensureDir(runtimeRoot);
   const response = await fetch(JAVA_25_DOWNLOAD_URL, { redirect: 'follow', signal: AbortSignal.timeout(300000), headers: { 'User-Agent': MODRINTH_USER_AGENT } });
-  if (!response.ok) throw new Error(`Java 25 konnte nicht geladen werden (HTTP ${response.status}). Installiere Java 25 und starte den Launcher erneut.`);
+  if (!response.ok) throw new Error(`Java 25 could not be downloaded (HTTP ${response.status}). Install Java 25 and restart the launcher.`);
   const data = Buffer.from(await response.arrayBuffer());
-  if (data.length < 10 * 1024 * 1024 || data.length > 500 * 1024 * 1024) throw new Error('Die heruntergeladene Java-25-Datei ist ungültig oder zu groß.');
+  if (data.length < 10 * 1024 * 1024 || data.length > 500 * 1024 * 1024) throw new Error('The downloaded Java 25 file is invalid or too large.');
   fs.writeFileSync(archive, data);
   try {
     const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
@@ -161,16 +172,16 @@ async function installPortableJava25() {
     await execFileAsync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', `Expand-Archive -LiteralPath '${escapedArchive}' -DestinationPath '${escapedRoot}' -Force`], { windowsHide: true, timeout: 180000 });
   } finally { try { fs.rmSync(archive, { force: true }); } catch (_) {} }
   const installed = await findJava25Home();
-  if (!installed) throw new Error('Java 25 wurde entpackt, konnte aber nicht geprüft werden. Installiere Java 25 und starte den Launcher erneut.');
-  send('status', { type: 'success', message: 'Java 25 ist bereit und wird für Minecraft 26.x verwendet.' });
+  if (!installed) throw new Error('Java 25 was extracted but could not be verified. Install Java 25 and restart the launcher.');
+  send('status', { type: 'success', message: 'Java 25 is ready and will be used for Minecraft 26.x.' });
   return installed;
 }
 async function javaPathForVersion(version) {
   if (!requiresJava25(version)) return null;
   const home = await findJava25Home() || await installPortableJava25();
   const binary = javaExecutable(home);
-  if (!exists(binary)) throw new Error('Java 25 wurde nicht gefunden. Starte den Launcher erneut oder installiere Java 25.');
-  send('log', `Minecraft ${version} verwendet Java ${await javaMajorVersion(home) || 25}: ${binary}`);
+  if (!exists(binary)) throw new Error('Java 25 was not found. Restart the launcher or install Java 25.');
+  send('log', `Minecraft ${version} is using Java ${await javaMajorVersion(home) || 25}: ${binary}`);
   return binary;
 }
 function instanceRoot(version) { return path.join(instancesRoot, version); }
@@ -221,11 +232,10 @@ async function loadWebsiteCapeEntitlements() {
   const capes = normalizeWebsiteCapeEntitlements(result);
   return Promise.all(capes.map(async cape => ({ ...cape, preview: `data:image/png;base64,${(await downloadWebsiteCape(cape, true)).toString('base64')}` })));
 }
-function validateWebsiteCapePng(bytes, preview = false) {
-  if (!Buffer.isBuffer(bytes) || bytes.length < 100 || bytes.length > (preview ? 1024 * 1024 : 256 * 1024)) throw new Error('Die Cape-Datei hat eine ungültige Größe.');
+function validateWebsiteCapePng(bytes, preview = false) {  if (!Buffer.isBuffer(bytes) || bytes.length < 100 || bytes.length > (preview ? 1024 * 1024 : 256 * 1024)) throw new Error('The cape file has an invalid size.');
   let image;
-  try { image = PNG.sync.read(bytes); } catch (_) { throw new Error('Die Website hat keine gültige PNG-Cape-Datei geliefert.'); }
-  if (preview ? (image.width < 64 || image.height < 64 || image.width > 512 || image.height > 512) : (image.width !== 64 || image.height !== 64)) throw new Error(preview ? 'Die Cape-Vorschau hat ein ungültiges Format.' : 'Das Cape muss eine 64×64-PNG sein.');
+  try { image = PNG.sync.read(bytes); } catch (_) { throw new Error('The website did not provide a valid PNG cape file.'); }
+  if (preview ? (image.width < 64 || image.height < 64 || image.width > 512 || image.height > 512) : (image.width !== 64 || image.height !== 64)) throw new Error(preview ? 'The cape preview has an invalid format.' : 'The cape must be a 64×64 PNG.');
   return bytes;
 }
 async function downloadWebsiteCape(cape, preview = false) {
@@ -233,7 +243,7 @@ async function downloadWebsiteCape(cape, preview = false) {
   return validateWebsiteCapePng(await communityBinaryFetch(route), preview);
 }
 function installWebsiteCape(capeId, bytes) {
-  if (!isCapeId(capeId)) throw new Error('Ungültige Cape-ID.');
+  if (!isCapeId(capeId)) throw new Error('Invalid cape ID.');
   let written = 0;
   const choice = { cape: capeId, updatedAt: new Date().toISOString(), source: 'website-account' };
   for (const version of SUPPORTED_VERSIONS) {
@@ -255,12 +265,12 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.13 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.14 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
   const response = await fetch(url, { headers: modrinthHeaders(), signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error(`Modrinth antwortet mit ${response.status}.`);
+  if (!response.ok) throw new Error(`Modrinth responded with ${response.status}.`);
   return response.json();
 }
 function selectPrimaryFile(files = [], extension) { return files.find(file => file.primary && file.filename.toLowerCase().endsWith(extension)) || files.find(file => file.filename.toLowerCase().endsWith(extension)); }
@@ -336,9 +346,9 @@ async function resolveModInstall(projectId, gameVersion) {
 }
 async function installModrinthProject(projectId, gameVersion) {
   const normalizedVersion = validModrinthVersion(gameVersion);
-  if (!normalizedVersion || !projectId) throw new Error('Ungültige Mod- oder Minecraft-Version.');
+  if (!normalizedVersion || !projectId) throw new Error('Invalid mod or Minecraft version.');
   const plan = await resolveModInstall(projectId, normalizedVersion);
-  if (!plan.versions.length) throw new Error(`Für Minecraft ${normalizedVersion} wurde keine passende Fabric-Version gefunden.`);
+  if (!plan.versions.length) throw new Error(`No suitable Fabric version was found for Minecraft ${normalizedVersion}.`);
   const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
   const projects = installedProjectMap(normalizedVersion); const installed = []; const present = [];
   for (const entry of plan.versions) {
@@ -357,14 +367,14 @@ async function installModrinthProject(projectId, gameVersion) {
     projects[entry.projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null }; installed.push(file.filename);
   }
   writeJson(installedProjectsFile(normalizedVersion), projects);
-  if (!installed.length && !present.length) throw new Error('Keine Mod-Datei konnte installiert werden.');
+  if (!installed.length && !present.length) throw new Error('No mod file could be installed.');
   return { ok: true, version: normalizedVersion, installed, present, missing: [...new Set(plan.missing)], conflicts: [...new Set(plan.conflicts)] };
 }
 async function searchModrinth(query, gameVersion, page = 0) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   const normalizedQuery = String(query || '').trim().slice(0, 80);
   const normalizedPage = Math.max(0, Math.min(99, Number(page) || 0));
-  if (!normalizedVersion) throw new Error('Diese Minecraft-Version wird nicht unterstützt.');
+  if (!normalizedVersion) throw new Error('This Minecraft version is not supported.');
   if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
   const facets = JSON.stringify([['project_type:mod'], [`versions:${normalizedVersion}`], ['categories:fabric']]);
   const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
@@ -373,7 +383,7 @@ async function searchModrinth(query, gameVersion, page = 0) {
     try {
       const compatible = await getCompatibleModVersion(hit.project_id, normalizedVersion);
       if (!compatible) return null;
-      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, author: hit.author || '', description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, installed: isProjectInstalled(normalizedVersion, hit.project_id), ...compatible };
+      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, author: hit.author || '', description: hit.description || 'No description available.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, installed: isProjectInstalled(normalizedVersion, hit.project_id), ...compatible };
     } catch (_) { return null; }
   }));
   return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
@@ -392,7 +402,7 @@ async function searchResourcePacks(query, gameVersion, page = 0) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   const normalizedQuery = String(query || '').trim().slice(0, 80);
   const normalizedPage = Math.max(0, Math.min(99, Number(page) || 0));
-  if (!normalizedVersion) throw new Error('Diese Minecraft-Version wird nicht unterstützt.');
+  if (!normalizedVersion) throw new Error('This Minecraft version is not supported.');
   if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
   const facets = JSON.stringify([['project_type:resourcepack'], [`versions:${normalizedVersion}`]]);
   const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
@@ -401,46 +411,45 @@ async function searchResourcePacks(query, gameVersion, page = 0) {
     try {
       const compatible = await getCompatibleResourcePackVersion(hit.project_id, normalizedVersion);
       if (!compatible) return null;
-      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, description: hit.description || 'Keine Beschreibung vorhanden.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, ...compatible };
+      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, description: hit.description || 'No description available.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, ...compatible };
     } catch (_) { return null; }
   }));
   return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
 }
 async function downloadResourcePack(gameVersion, requested = {}) {
   const normalizedVersion = validModrinthVersion(gameVersion);
-  if (!normalizedVersion || !requested.versionId) throw new Error('Ungültige Resource-Pack- oder Minecraft-Version.');
+  if (!normalizedVersion || !requested.versionId) throw new Error('Invalid resource pack or Minecraft version.');
   const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
-  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion)) throw new Error('Dieses Resource Pack ist nicht mit der ausgewählten Minecraft-Version kompatibel.');
-  const file = selectPrimaryZip(version.files);
-  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.zip$/i.test(file.filename)) throw new Error('Resource-Pack-Datei konnte nicht sicher bestimmt werden.');
-  if (file.size > 500 * 1024 * 1024) throw new Error('Das Resource Pack ist größer als 500 MB und wurde aus Sicherheitsgründen abgelehnt.');
+  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion)) throw new Error('This resource pack is not compatible with the selected Minecraft version.');  const file = selectPrimaryZip(version.files);
+  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.zip$/i.test(file.filename)) throw new Error('Could not securely determine the resource pack file.');
+  if (file.size > 500 * 1024 * 1024) throw new Error('The resource pack is larger than 500 MB and was rejected for security reasons.');
   const targetDir = resourcePacksRoot(normalizedVersion); ensureDir(targetDir);
   const target = path.join(targetDir, file.filename);
-  if (exists(target)) throw new Error(`Die Datei ${file.filename} ist bereits in dieser Instanz vorhanden.`);
+  if (exists(target)) throw new Error(`The file ${file.filename} already exists in this instance.`);
   const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(180000) });
-  if (!response.ok) throw new Error(`Der Resource-Pack-Download ist fehlgeschlagen (${response.status}).`);
+  if (!response.ok) throw new Error(`Resource pack download failed (${response.status}).`);
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 500 * 1024 * 1024) throw new Error('Das heruntergeladene Resource Pack ist größer als 500 MB.');
-  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('Die Prüfsumme des Resource Packs stimmt nicht überein.'); }
+  if (buffer.length > 500 * 1024 * 1024) throw new Error('The downloaded resource pack is larger than 500 MB.');
+  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The resource pack checksum does not match.'); }
   fs.writeFileSync(target, buffer);
   return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
 }
 async function downloadModrinthMod(gameVersion, requested = {}) {
   const normalizedVersion = validModrinthVersion(gameVersion);
-  if (!normalizedVersion || !requested.versionId) throw new Error('Ungültige Mod- oder Minecraft-Version.');
+  if (!normalizedVersion || !requested.versionId) throw new Error('Invalid mod or Minecraft version.');
   const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
-  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion) || !Array.isArray(version.loaders) || !version.loaders.includes('fabric')) throw new Error('Diese Mod-Version ist nicht mit Fabric und der ausgewählten Minecraft-Version kompatibel.');
+  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion) || !Array.isArray(version.loaders) || !version.loaders.includes('fabric')) throw new Error('This mod version is not compatible with Fabric and the selected Minecraft version.');
   const file = selectPrimaryJar(version.files);
-  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) throw new Error('Mod-Datei konnte nicht sicher bestimmt werden.');
-  if (file.size > 100 * 1024 * 1024) throw new Error('Die Mod-Datei ist größer als 100 MB und wurde aus Sicherheitsgründen abgelehnt.');
+  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) throw new Error('Mod file could not be securely determined.');
+  if (file.size > 100 * 1024 * 1024) throw new Error('The mod file is larger than 100 MB and was rejected for security reasons.');
   const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
   const target = path.join(targetDir, file.filename);
-  if (exists(target)) throw new Error(`Die Datei ${file.filename} ist bereits in dieser Instanz vorhanden.`);
+  if (exists(target)) throw new Error(`The file ${file.filename} already exists in this instance.`);
   const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) });
-  if (!response.ok) throw new Error(`Der Mod-Download ist fehlgeschlagen (${response.status}).`);
+  if (!response.ok) throw new Error(`Mod download failed (${response.status}).`);
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (buffer.length > 100 * 1024 * 1024) throw new Error('Die heruntergeladene Datei ist größer als 100 MB.');
-  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('Die Prüfsumme der Mod-Datei stimmt nicht überein.'); }
+  if (buffer.length > 100 * 1024 * 1024) throw new Error('The downloaded file is larger than 100 MB.');
+  if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The mod file checksum does not match.'); }
   fs.writeFileSync(target, buffer);
   return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
 }
@@ -455,21 +464,21 @@ async function communityFetch(route, options = {}) {
   const response = await fetch(`${COMMUNITY_BASE_URL}${route}`, { ...options, headers, signal: AbortSignal.timeout(30000) });
   const type = response.headers.get('content-type') || '';
   const payload = type.includes('application/json') ? await response.json().catch(() => null) : await response.text().catch(() => '');
-  if (!response.ok) throw new Error(payload?.error || payload || `Community antwortet mit ${response.status}.`);
+  if (!response.ok) throw new Error(payload?.error || payload || `Community responded with ${response.status}.`);
   return payload;
 }
 async function communityBinaryFetch(route) {
-  if (!/^\/api\/capes\/[a-z0-9_-]{1,48}\/(?:texture|preview)$/i.test(String(route || ''))) throw new Error('Ungültiger Cape-Downloadpfad.');
+  if (!/^\/api\/capes\/[a-z0-9_-]{1,48}\/(?:texture|preview)$/i.test(String(route || ''))) throw new Error('Invalid cape download path.');
   const cookie = await communityCookieHeader();
   const headers = { Accept: 'image/png', 'User-Agent': MODRINTH_USER_AGENT };
   if (cookie) headers.Cookie = cookie;
   const response = await fetch(`${COMMUNITY_BASE_URL}${route}`, { headers, signal: AbortSignal.timeout(30000) });
   if (!response.ok) {
     const payload = await response.json().catch(() => null);
-    throw new Error(payload?.error || `Cape-Datei antwortet mit ${response.status}.`);
+    throw new Error(payload?.error || `Cape file responded with ${response.status}.`);
   }
   const type = response.headers.get('content-type') || '';
-  if (!type.includes('image/png')) throw new Error('Die Website hat keine PNG-Cape-Datei geliefert.');
+  if (!type.includes('image/png')) throw new Error('The website did not provide a PNG cape file.');
   return Buffer.from(await response.arrayBuffer());
 }
 async function getCommunityState() {
@@ -482,13 +491,13 @@ function communityDownloadsRoot() { return path.join(vortexConfigRoot(COSMETICS_
 function validCommunityFilename(name) { return /^(preset[123]\.txt|macro\.txt)$/i.test(String(name || '')); }
 async function listCommunityPresets() {
   const presets = await communityFetch('/api/presets');
-  return Array.isArray(presets) ? presets.slice(0, 100).map(item => ({ id: item.id, name: String(item.name || 'Ohne Namen').slice(0, 60), filename: validCommunityFilename(item.filename) ? item.filename : 'preset1.txt', kind: item.kind === 'macro' ? 'macro' : 'preset', description: String(item.description || ''), downloads: Number(item.downloads || 0), createdAt: item.created_at || null, shareCode: String(item.share_code || ''), username: String(item.display_name || item.username || 'Community') })) : [];
+  return Array.isArray(presets) ? presets.slice(0, 100).map(item => ({ id: item.id, name: String(item.name || 'Unnamed').slice(0, 60), filename: validCommunityFilename(item.filename) ? item.filename : 'preset1.txt', kind: item.kind === 'macro' ? 'macro' : 'preset', description: String(item.description || ''), downloads: Number(item.downloads || 0), createdAt: item.created_at || null, shareCode: String(item.share_code || ''), username: String(item.display_name || item.username || 'Community') })) : [];
 }
 async function downloadCommunityPreset(shareCode, filename) {
   const code = String(shareCode || '');
-  if (!/^[a-f0-9]{8,32}$/i.test(code) || !validCommunityFilename(filename)) throw new Error('Ungültiger Community-Beitrag.');
+  if (!/^[a-f0-9]{8,32}$/i.test(code) || !validCommunityFilename(filename)) throw new Error('Invalid community entry.');
   const content = await communityFetch(`/api/presets/${encodeURIComponent(code)}/download`);
-  if (typeof content !== 'string' || !content.length || content.length > 400000) throw new Error('Der Community-Download ist ungültig oder zu groß.');
+  if (typeof content !== 'string' || !content.length || content.length > 400000) throw new Error('The community download is invalid or too large.');
   ensureDir(communityDownloadsRoot());
   const targetName = `${code}-${filename}`;
   fs.writeFileSync(path.join(communityDownloadsRoot(), targetName), content, 'utf8');
@@ -496,29 +505,29 @@ async function downloadCommunityPreset(shareCode, filename) {
 }
 async function uploadCommunityPreset(metadata = {}) {
   const state = await getCommunityState();
-  if (!state.websiteAccount?.username) throw new Error('Melde dich zuerst im Community-Fenster an.');
-  const choice = await dialog.showOpenDialog(mainWindow, { title: 'Vortex Preset oder Makro auswählen', properties: ['openFile'], filters: [{ name: 'Vortex-Preset oder Makro', extensions: ['txt'] }] });
+  if (!state.websiteAccount?.username) throw new Error('Please sign in to the community window first.');
+  const choice = await dialog.showOpenDialog(mainWindow, { title: 'Select Vortex Preset or Macro', properties: ['openFile'], filters: [{ name: 'Vortex preset or macro', extensions: ['txt'] }] });
   if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
   const source = choice.filePaths[0];
   const content = fs.readFileSync(source, 'utf8');
-  if (!content.length || Buffer.byteLength(content, 'utf8') > 400000) throw new Error('Die Datei muss zwischen 1 Byte und 400 KB groß sein.');
+  if (!content.length || Buffer.byteLength(content, 'utf8') > 400000) throw new Error('The file must be between 1 byte and 400 KB in size.');
   const isMacro = content.trim().startsWith('vortex-macro:');
   const filename = isMacro ? 'macro.txt' : String(metadata.filename || path.basename(source));
-  if (!isMacro && !validCommunityFilename(filename)) throw new Error('Ein Preset muss preset1.txt, preset2.txt oder preset3.txt heißen.');
+  if (!isMacro && !validCommunityFilename(filename)) throw new Error('A preset must be named preset1.txt, preset2.txt or preset3.txt.');
   const name = String(metadata.name || path.basename(source, path.extname(source))).trim().slice(0, 60);
   const description = String(metadata.description || '').trim().slice(0, 500);
-  if (!name) throw new Error('Gib einen Namen für deinen Community-Beitrag ein.');
+  if (!name) throw new Error('Please provide a name for your community submission.');
   const visibility = metadata.visibility === 'unlisted' ? 'unlisted' : 'public';
   const result = await communityFetch('/api/presets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, filename, description, visibility, content }) });
   return { ok: true, shareCode: result.shareCode || null, kind: isMacro ? 'macro' : 'preset' };
 }
 function openCommunityLogin() {
-  const communityWindow = new BrowserWindow({ width: 520, height: 720, title: 'Vortex Community anmelden', parent: mainWindow, modal: true, backgroundColor: '#090d18', webPreferences: { contextIsolation: true, nodeIntegration: false } });
+  const communityWindow = new BrowserWindow({ width: 520, height: 720, title: 'Sign in to Vortex Community', parent: mainWindow, modal: true, backgroundColor: '#090d18', webPreferences: { contextIsolation: true, nodeIntegration: false } });
   const notifyIfLoggedIn = async () => {
     const state = await getCommunityState();
     if (state.websiteAccount?.username) {
       send('community-state', state);
-      send('status', { type: 'success', message: `Community angemeldet als ${state.websiteAccount.display_name || state.websiteAccount.username}.` });
+      send('status', { type: 'success', message: `Signed in to the community as ${state.websiteAccount.display_name || state.websiteAccount.username}.` });
       if (!communityWindow.isDestroyed()) communityWindow.close();
     }
   };
@@ -542,12 +551,12 @@ function setupAutoUpdater() {
   autoUpdater.on('error', error => setUpdateState({ status: 'error', error: error.message || String(error) }));
 }
 async function checkForUpdates() {
-  if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates sind im Entwicklungsmodus deaktiviert.' });
+  if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates are disabled in development mode.' });
   try { await autoUpdater.checkForUpdates(); return updateState; }
   catch (error) { return setUpdateState({ status: 'error', error: error.message || String(error) }); }
 }
 async function downloadUpdate() {
-  if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates sind im Entwicklungsmodus deaktiviert.' });
+  if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates are disabled in development mode.' });
   try { await autoUpdater.downloadUpdate(); return updateState; }
   catch (error) { return setUpdateState({ status: 'error', error: error.message || String(error) }); }
 }
@@ -555,7 +564,7 @@ async function downloadUpdate() {
 function accountId(value = {}) { const uuid = String(value.uuid || '').trim().toLowerCase(); return uuid || `name:${String(value.username || '').trim().toLowerCase()}`; }
 function profileImagePath(value) { const file = String(value?.profileImage || ''); return /^[a-z0-9][a-z0-9._-]{0,100}\.(png|jpe?g|webp)$/i.test(file) ? path.join(profileImagesRoot, file) : null; }
 function dataUriForImage(file) { if (!file || !exists(file)) return null; const size = fs.statSync(file).size; if (!size || size > 5 * 1024 * 1024) return null; const extension = path.extname(file).toLowerCase(); const type = extension === '.png' ? 'image/png' : extension === '.webp' ? 'image/webp' : 'image/jpeg'; return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`; }
-function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft-Spieler'), uuid: String(value?.uuid || ''), hasCustomProfileImage: Boolean(dataUriForImage(profileImagePath(value))) }; }
+function accountSummary(value) { return { id: accountId(value), username: String(value?.username || 'Minecraft Player'), uuid: String(value?.uuid || ''), hasCustomProfileImage: Boolean(dataUriForImage(profileImagePath(value))) }; }
 function avatarFromMinecraftSkin(skin) {
   const avatar = new PNG({ width: 64, height: 64 });
   for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
@@ -657,7 +666,7 @@ function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 3,
 function serverById(id) { return serverLibrary().find(server => server.id === String(id || '')) || null; }
 async function refreshServerStatus(id, force = false) {
   const server = serverById(id);
-  if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' };
+  if (!server) return { ok: false, error: 'The server was not found.' };
   const cached = serverStatusCache.get(server.id);
   if (!force && cached && Date.now() - cached.updatedAt < SERVER_STATUS_CACHE_MS) return { ok: true, server: serverSummary(server), status: cached.status, cached: true };
   if (serverStatusPending.has(server.id)) return serverStatusPending.get(server.id);
@@ -742,16 +751,16 @@ async function maintainInstancesSilently() {
       let fabricInstalled = false;
       if (!hasFabricProfile(version)) {
         try { await installFabricProfile(version, instanceRoot(version)); fabricInstalled = true; }
-        catch (error) { send('log', `Fabric-Prüfung für ${version} wird wiederholt: ${error.message}`); }
+        catch (error) { send('log', `Fabric check for ${version} will be retried: ${error.message}`); }
       }
       if (repair.installed || repair.removedVoice || repair.replaced || fabricInstalled) {
         repairedVersions.push(version);
         const details = [];
-        if (repair.installed) details.push(`${repair.installed} Pflichtdatei(en) wiederhergestellt`);
-        if (fabricInstalled) details.push('Fabric-Profil wiederhergestellt');
-        if (repair.replaced) details.push('veränderte Vortex-Dateien ersetzt');
-        if (repair.removedVoice) details.push('nicht erlaubte Voice-Chat-Dateien entfernt');
-        send('status', { type: 'success', message: `Instanzschutz ${version}: ${details.join(', ')}.` });
+        if (repair.installed) details.push(`${repair.installed} required file(s) restored`);
+        if (fabricInstalled) details.push('Fabric profile restored');
+        if (repair.replaced) details.push('modified Vortex files replaced');
+        if (repair.removedVoice) details.push('unauthorized voice chat files removed');
+        send('status', { type: 'success', message: `Instance maintenance ${version}: ${details.join(', ')}.` });
       }
     }
     lastMaintenance = { checkedAt: new Date().toISOString(), repairedVersions };
@@ -787,13 +796,13 @@ function getInstanceSummary(version) {
 
 async function installFabricProfile(version, root) {
   const response = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(version)}`);
-  if (!response.ok) throw new Error(`Fabric-Metadaten konnten nicht geladen werden (${response.status}).`);
+  if (!response.ok) throw new Error(`Fabric metadata could not be loaded (${response.status}).`);
   const loaders = await response.json();
   const preferred = loaders.find(entry => entry.loader?.stable) || loaders[0];
-  if (!preferred?.loader?.version) throw new Error(`Für Minecraft ${version} ist kein Fabric Loader verfügbar.`);
+  if (!preferred?.loader?.version) throw new Error(`No Fabric Loader is available for Minecraft ${version}.`);
   const loaderVersion = preferred.loader.version;
   const profileResponse = await fetch(`https://meta.fabricmc.net/v2/versions/loader/${encodeURIComponent(version)}/${encodeURIComponent(loaderVersion)}/profile/json`);
-  if (!profileResponse.ok) throw new Error(`Fabric-Profil konnte nicht geladen werden (${profileResponse.status}).`);
+  if (!profileResponse.ok) throw new Error(`Fabric profile could not be loaded (${profileResponse.status}).`);
   const profile = await profileResponse.json();
   const profileId = `fabric-loader-${loaderVersion}-${version}`;
   profile.id = profileId;
@@ -818,18 +827,18 @@ function cleanReplacedVortexJars(version, modsDir) {
 
 async function ensureInstance(version) {
   const normalized = sanitizeVersion(version);
-  if (!normalized) throw new Error('Diese Minecraft-Version wird vom Vortex Client nicht unterstützt.');
+  if (!normalized) throw new Error('This Minecraft version is not supported by the Vortex Client.');
   const root = instanceRoot(normalized);
   const mods = modsRoot(normalized);
   ensureDir(mods);
   ensureDir(vortexConfigRoot(normalized));
-  send('status', { type: 'info', message: `Vortex-Instanz ${normalized} wird geprüft …` });
+  send('status', { type: 'info', message: `Checking Vortex instance ${normalized}…` });
   const { installed, removedVoice, replaced } = maintainBundledMods(normalized);
-  if (removedVoice) send('log', `Unerwünschte Voice-Chat-Dateien aus ${normalized} entfernt.`);
-  if (replaced) send('log', `Veraltete Vortex-Kernmod-Dateien in ${normalized} ersetzt.`);
+  if (removedVoice) send('log', `Removed unwanted voice chat files from ${normalized}.`);
+  if (replaced) send('log', `Replaced outdated Vortex core mod files in ${normalized}.`);
   const cosmeticState = loadState();
   const protectedCosmetics = [...protectedModNames(normalized)];
-  if (protectedCosmetics.length) send('log', `Vortex Cosmetics-Core geschützt: ${protectedCosmetics.join(', ')}`);
+  if (protectedCosmetics.length) send('log', `Vortex Cosmetics core protected: ${protectedCosmetics.join(', ')}`);
   writeJson(path.join(vortexConfigRoot(normalized), 'launcher-profile.json'), {
     launcher: 'Vortex Client Launcher',
     version: normalized,
@@ -838,9 +847,9 @@ async function ensureInstance(version) {
     launcherSelection: cosmeticState,
     generatedAt: new Date().toISOString()
   });
-  send('status', { type: 'info', message: `Fabric wird für ${normalized} bereitgestellt …` });
+  send('status', { type: 'info', message: `Preparing Fabric for ${normalized}…` });
   const fabric = await installFabricProfile(normalized, root);
-  send('status', { type: 'success', message: `Instanz ${normalized} bereit: Fabric ${fabric.loaderVersion}, ${bundledModFiles(normalized).length} Pflichtmods geprüft.` });
+  send('status', { type: 'success', message: `Instance ${normalized} ready: Fabric ${fabric.loaderVersion}, ${bundledModFiles(normalized).length} required mods verified.` });
   return { ...getInstanceSummary(normalized), installed, removedVoice, replaced, fabric };
 }
 
@@ -864,7 +873,7 @@ function applyHat(png, hat) {
 function clearCapeOverlay(png) { fillPixels(png, 32, 36, 8, 12, 0x00000000); }
 function drawCapeBase(png, colors) {
   const { base, shade, trim, light } = colors;
-  // Die äußere Rückenfläche des Standard-Skins liegt im Rechteck x=32–39, y=36–47.
+  // The outer back surface of the standard skin occupies rectangle x=32–39, y=36–47.
   fillPixels(png, 34, 36, 4, 1, trim);
   fillPixels(png, 33, 37, 6, 1, shade);
   fillPixels(png, 32, 38, 8, 7, base);
@@ -905,25 +914,25 @@ function applyEmblem(png, emblem) {
 }
 async function fetchMinecraftSkinByUsername(username) {
   const normalized = String(username || '').trim();
-  if (!/^[A-Za-z0-9_]{3,16}$/.test(normalized)) throw new Error('Gib einen gültigen Minecraft-Benutzernamen ein.');
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(normalized)) throw new Error('Please enter a valid Minecraft username.');
   const lookup = await fetch(`https://api.minecraftservices.com/minecraft/profile/lookup/name/${encodeURIComponent(normalized)}`, { signal: AbortSignal.timeout(30000) });
-  if (!lookup.ok) throw new Error('Dieser Minecraft-Benutzername wurde nicht gefunden.');
+  if (!lookup.ok) throw new Error('This Minecraft username was not found.');
   const profile = await lookup.json();
-  if (!/^[a-f0-9]{32}$/i.test(profile?.id || '')) throw new Error('Das Minecraft-Profil ist ungültig.');
+  if (!/^[a-f0-9]{32}$/i.test(profile?.id || '')) throw new Error('The Minecraft profile is invalid.');
   const sessionProfile = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${encodeURIComponent(profile.id)}`, { signal: AbortSignal.timeout(30000) });
-  if (!sessionProfile.ok) throw new Error('Die Skin-Daten konnten nicht geladen werden.');
+  if (!sessionProfile.ok) throw new Error('Could not load the skin data.');
   const sessionData = await sessionProfile.json();
   const textureProperty = (sessionData.properties || []).find(property => property.name === 'textures' && typeof property.value === 'string');
-  if (!textureProperty) throw new Error('Für dieses Profil ist kein Minecraft-Skin vorhanden.');
+  if (!textureProperty) throw new Error('No Minecraft skin is available for this profile.');
   const textureData = JSON.parse(Buffer.from(textureProperty.value, 'base64').toString('utf8'));
   const url = textureData?.textures?.SKIN?.url;
-  if (!/^https:\/\/textures\.minecraft\.net\/texture\/[a-f0-9]+$/i.test(url || '')) throw new Error('Die Skin-Textur konnte nicht sicher bestimmt werden.');
+  if (!/^https:\/\/textures\.minecraft\.net\/texture\/[a-f0-9]+$/i.test(url || '')) throw new Error('Could not securely determine the skin texture.');
   const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
-  if (!response.ok) throw new Error('Der Minecraft-Skin konnte nicht geladen werden.');
+  if (!response.ok) throw new Error('Could not load the Minecraft skin.');
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw new Error('Die Skin-Datei ist ungültig oder zu groß.');
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw new Error('The skin file is invalid or too large.');
   const skin = PNG.sync.read(buffer);
-  if (skin.width !== 64 || skin.height !== 64) throw new Error('Der gefundene Skin hat kein gültiges 64×64-Format.');
+  if (skin.width !== 64 || skin.height !== 64) throw new Error('The found skin does not have a valid 64×64 format.');
   const temporaryFile = path.join(skinsRoot(COSMETICS_MOD_VERSION), `import-${safeFileName(profile.name || normalized)}.png`);
   ensureDir(skinsRoot(COSMETICS_MOD_VERSION));
   fs.writeFileSync(temporaryFile, buffer);
@@ -939,11 +948,11 @@ function cosmeticSkinPreview(version = COSMETICS_MOD_VERSION) {
   return { ok: true, preview: `data:image/png;base64,${data}`, fileName };
 }
 function makeCosmeticSkin(version, sourceFile, hat, emblem) {
-  if (version !== COSMETICS_MOD_VERSION) throw new Error('Die integrierte Vortex-Cosmetics-Ausgabe unterstützt aktuell Minecraft 1.21.11.');
+  if (version !== COSMETICS_MOD_VERSION) throw new Error('The built-in Vortex Cosmetics output currently supports Minecraft 1.21.11.');
   const source = PNG.sync.read(fs.readFileSync(sourceFile));
-  if (source.width !== 64 || source.height !== 64) throw new Error('Bitte wähle einen gültigen Minecraft-Skin im Format 64×64 Pixel.');
-  // Hüte werden ab Version 2.29.0 als echte 3D-Geometrie vom Cosmetics-Core
-  // direkt am animierten Kopf dargestellt. Der Skin selbst bleibt dadurch sauber.
+  if (source.width !== 64 || source.height !== 64) throw new Error('Please choose a valid Minecraft skin in 64×64 pixel format.');
+  // Since version 2.29.0, hats are rendered as real 3D geometry by the Cosmetics Core
+  // directly on the animated head, keeping the skin texture itself clean.
   applyEmblem(source, emblem);
   const baseName = safeFileName(path.basename(sourceFile, path.extname(sourceFile)));
   ensureDir(skinsRoot(version));
@@ -980,70 +989,69 @@ ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(acc
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
 ipcMain.handle('refresh-server-status', async (_event, id, force = false) => {
   try { return await refreshServerStatus(id, Boolean(force)); }
-  catch (error) { return { ok: false, error: error.message || 'Der Minecraft-Status konnte nicht aktualisiert werden.' }; }
+  catch (error) { return { ok: false, error: error.message || 'Minecraft status could not be updated.' }; }
 });
-ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server: serverSummary(server), servers: serverSummaries(), state }; } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('select-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' }; return { ok: true, server, state: saveState({ selectedServerId: server.id }) }; });
-ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); serverStatusCache.delete(server.id); serverStatusPending.delete(server.id); const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverSummaries(), state }; });
+ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Enter a server name.'); if (!address) throw new Error('Enter a valid server IP or domain.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('This server is already in your library.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server: serverSummary(server), servers: serverSummaries(), state }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('select-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'The selected server was not found.' }; return { ok: true, server, state: saveState({ selectedServerId: server.id }) }; });
+ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'The server was not found.' }; if (server.official) return { ok: false, error: 'The official VortexPvP server is permanently available.' }; const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); serverStatusCache.delete(server.id); serverStatusPending.delete(server.id); const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverSummaries(), state }; });
 ipcMain.handle('mark-release-news-seen', () => ({ ok: true, news: markReleaseNewsSeen() }));
 ipcMain.handle('get-account-avatar', async (_event, id) => { const selected = accounts.find(entry => accountId(entry) === String(id || '')); return { ok: Boolean(selected), avatar: selected ? await accountAvatar(selected) : null, custom: Boolean(selected && dataUriForImage(profileImagePath(selected))) }; });
 ipcMain.handle('select-account-avatar', async (_event, id) => {
   try {
-    const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) throw new Error('Das gespeicherte Konto wurde nicht gefunden.');
-    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Persönliches Profilbild wählen', properties: ['openFile'], filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
+    const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) throw new Error('The saved account was not found.');
+    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Choose profile picture', properties: ['openFile'], filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
     if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
-    const source = choice.filePaths[0]; const stat = fs.statSync(source); if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('Wähle ein Bild mit maximal 5 MB.');
-    const extension = path.extname(source).toLowerCase(); if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) throw new Error('Dieses Bildformat wird nicht unterstützt.');
+    const source = choice.filePaths[0]; const stat = fs.statSync(source); if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('Choose an image up to 5 MB.');
+    const extension = path.extname(source).toLowerCase(); if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) throw new Error('This image format is not supported.');
     ensureDir(profileImagesRoot); const fileName = `profile-${safeFileName(accountId(selected))}${extension}`; fs.copyFileSync(source, path.join(profileImagesRoot, fileName)); selected.profileImage = fileName; saveAccounts();
     return { ok: true, avatar: dataUriForImage(profileImagePath(selected)), custom: true };
   } catch (error) { return { ok: false, error: error.message }; }
 });
 ipcMain.handle('reset-account-avatar', async (_event, id) => {
-  const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' };
+  const selected = accounts.find(entry => accountId(entry) === String(id || '')); if (!selected) return { ok: false, error: 'The saved account was not found.' };
   const image = profileImagePath(selected); if (image) try { fs.rmSync(image, { force: true }); } catch (_) {}
   delete selected.profileImage; saveAccounts(); return { ok: true, avatar: await minecraftAvatarData(selected), custom: false };
 });
 ipcMain.handle('ai-get-state', () => aiStudio.getState());
 ipcMain.handle('ai-save-key', (_event, key, provider, textModel) => { try { return { ok: true, state: aiStudio.saveKey(key, provider, textModel) }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-remove-key', () => ({ ok: true, state: aiStudio.removeKey() }));
-ipcMain.handle('ai-generate-skin', async (_event, prompt) => { try { const result = await aiStudio.generateSkin(prompt); const state = loadState(); result.profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, result.path, state.hat || 'vortex-cap', state.emblem || 'vortex-crest'); send('status', { type: 'success', message: `KI-Skin „${result.design.title}“ wurde lokal erstellt.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('ai-generate-cape', async (_event, prompt) => { try { const result = await aiStudio.generateCape(prompt); send('status', { type: 'success', message: `KI-Cape „${result.design.title}“ wurde lokal für ${result.instances} Instanz(en) gespeichert.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('ai-create-mod-project', async (_event, prompt) => { try { const result = await aiStudio.createModProject(prompt); send('status', { type: 'success', message: `Private Mod-Projektvorlage „${result.design.title}“ wurde lokal erstellt.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-generate-skin', async (_event, prompt) => { try { const result = await aiStudio.generateSkin(prompt); const state = loadState(); result.profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, result.path, state.hat || 'vortex-cap', state.emblem || 'vortex-crest'); send('status', { type: 'success', message: `AI skin '${result.design.title}' was created locally.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-generate-cape', async (_event, prompt) => { try { const result = await aiStudio.generateCape(prompt); send('status', { type: 'success', message: `AI cape '${result.design.title}' was saved locally for ${result.instances} instance(s).` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('ai-create-mod-project', async (_event, prompt) => { try { const result = await aiStudio.createModProject(prompt); send('status', { type: 'success', message: `Private mod project template '${result.design.title}' was created locally.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-open-output', (_event, kind) => { const folder = aiStudio.openOutputFolder(kind); return shell.openPath(folder); });
-ipcMain.handle('open-launch-log', () => { if (!exists(launchLogPath())) return { ok: false, error: 'Es wurde noch kein Launcher-Protokoll erstellt.' }; shell.showItemInFolder(launchLogPath()); return { ok: true }; });
-ipcMain.handle('open-crash-log', () => { if (!exists(crashLogPath())) return { ok: false, error: 'Es wurde noch kein Fehlerprotokoll erstellt.' }; shell.showItemInFolder(crashLogPath()); return { ok: true }; });
-ipcMain.handle('get-website-cape-catalogue', async () => { const choice = loadJson(websiteCapeChoiceFile(), { cape: null }); try { return { ok: true, capes: await loadWebsiteCapeEntitlements(), choice, needsWebsiteLogin: false }; } catch (error) { const community = await getCommunityState(); return { ok: true, capes: [], choice, needsWebsiteLogin: !community.websiteAccount?.username, error: error.message }; } });
-ipcMain.handle('select-website-cape', async (_event, capeId) => { try { const normalizedId = capeId === null || capeId === '' ? null : String(capeId); if (normalizedId === null) { const choice = clearWebsiteCape(); send('log', 'Website-Cape entfernt.'); return { ok: true, choice, written: SUPPORTED_VERSIONS.length }; } const capes = await loadWebsiteCapeEntitlements(); const cape = capes.find(entry => entry.id === normalizedId); if (!cape) throw new Error('Dieses Cape ist für dein angemeldetes Website-Konto nicht freigeschaltet.'); const result = installWebsiteCape(cape.id, await downloadWebsiteCape(cape)); send('log', `Website-Cape freigeschaltet und installiert: ${cape.id}.`); return { ok: true, ...result }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('open-launch-log', () => { if (!exists(launchLogPath())) return { ok: false, error: 'No launcher log has been created yet.' }; shell.showItemInFolder(launchLogPath()); return { ok: true }; });
+ipcMain.handle('open-crash-log', () => { if (!exists(crashLogPath())) return { ok: false, error: 'No crash log has been created yet.' }; shell.showItemInFolder(crashLogPath()); return { ok: true }; });
+ipcMain.handle('get-website-cape-catalogue', async () => { const choice = loadJson(websiteCapeChoiceFile(), { cape: null }); try { return { ok: true, capes: await loadWebsiteCapeEntitlements(), choice, needsWebsiteLogin: false }; } catch (error) { const community = await getCommunityState(); return { ok: true, capes: [], choice, needsWebsiteLogin: !community.websiteAccount?.username, error: error.message }; } });ipcMain.handle('select-website-cape', async (_event, capeId) => { try { const normalizedId = capeId === null || capeId === '' ? null : String(capeId); if (normalizedId === null) { const choice = clearWebsiteCape(); send('log', 'Website cape removed.'); return { ok: true, choice, written: SUPPORTED_VERSIONS.length }; } const capes = await loadWebsiteCapeEntitlements(); const cape = capes.find(entry => entry.id === normalizedId); if (!cape) throw new Error('This cape is not unlocked for your signed-in website account.'); const result = installWebsiteCape(cape.id, await downloadWebsiteCape(cape)); send('log', `Website cape unlocked and installed: ${cape.id}.`); return { ok: true, ...result }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-get-state', () => getCommunityState());
 ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });
 ipcMain.handle('community-download-preset', async (_event, shareCode, filename) => { try { return await downloadCommunityPreset(shareCode, filename); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-upload-preset', async (_event, metadata) => { try { return await uploadCommunityPreset(metadata); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
-ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} wurde in die Minecraft-${result.version}-Instanz geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
-ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} Mod-Datei(en) für Minecraft ${result.version} bereitgestellt.` }); if (result.conflicts.length) send('log', `Hinweis: mögliche inkompatible Modrinth-Projekte: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Ohne passende Version übersprungen: ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
-ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} wurde in die Resource-Packs von Minecraft ${result.version} geladen.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} was added to the resource packs of Minecraft ${result.version}.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('check-for-updates', () => checkForUpdates());
 ipcMain.handle('download-update', () => downloadUpdate());
-ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'Es ist kein heruntergeladenes Update vorhanden.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });
+ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'No downloaded update available.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });
 ipcMain.handle('select-version', (_event, version) => ({ ok: Boolean(sanitizeVersion(version)), state: saveState({ selectedVersion: version }) }));
 ipcMain.handle('prepare-instance', async (_event, version) => { try { return { ok: true, instance: await ensureInstance(version) }; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('get-instance-summary', (_event, version) => getInstanceSummary(version));
 ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(modsRoot(normalized)); return shell.openPath(modsRoot(normalized)); });
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
-ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Ungültige Resource-Pack-Datei.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'Das Resource Pack wurde nicht gefunden.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} wurde aus Minecraft ${normalized} entfernt.` }); return { ok: true, fileName: safeName, version: normalized }; });
-ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics-Skins sind nur für 1.21.11 verfügbar.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
-ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Kein Cosmetics-Profil für diese Version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
-ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = mappedProjectForFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? (stored?.iconUrl ? stored : await getProjectMetadata(mapping.projectId)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl: metadata?.iconUrl || null, title: metadata?.title || null, author: metadata?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics-Core · wird automatisch geschützt' : required.has(name) ? 'Vortex-Pflichtmod' : enabled ? 'Eigener Mod · aktiv' : 'Eigener Mod · deaktiviert' }; })); });
-ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Ungültige Mod-Datei.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'Diese Vortex-Pflichtmod ist geschützt und kann nicht entfernt werden.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'Die Mod-Datei wurde nicht gefunden.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} wurde aus Minecraft ${normalized} entfernt.` }); return { ok: true, fileName: baseName, version: normalized }; });
-ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Ungültige Mod-Datei.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'Diese Vortex-Pflichtmod ist geschützt und kann nicht deaktiviert werden.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'Die Mod-Datei wurde nicht gefunden.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'Die Ziel-Datei existiert bereits.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });
+ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
+ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics skins are only available for 1.21.11.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
+ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
+ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = mappedProjectForFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? (stored?.iconUrl ? stored : await getProjectMetadata(mapping.projectId)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl: metadata?.iconUrl || null, title: metadata?.title || null, author: metadata?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
+ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
+ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be disabled.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'The mod file was not found.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'The target file already exists.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });
 ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const state = loadState();
   const hat = cosmetics.hat ?? state.hat;
   const emblem = cosmetics.emblem ?? state.emblem;
-  if (!HATS.includes(hat) || !EMBLEMS.includes(emblem)) return { ok: false, error: 'Unbekanntes Cosmetic.' };
+  if (!HATS.includes(hat) || !EMBLEMS.includes(emblem)) return { ok: false, error: 'Unknown cosmetic.' };
   const saved = saveState({ hat, emblem });
   if (Object.prototype.hasOwnProperty.call(cosmetics, 'emblem')) {
     const choice = { cape: saved.emblem === 'none' ? null : saved.emblem, updatedAt: new Date().toISOString(), source: 'bodyfit-cosmetic' };
@@ -1062,54 +1070,53 @@ ipcMain.handle('get-cosmetic-skin-preview', (_event, version = COSMETICS_MOD_VER
 ipcMain.handle('import-cosmetic-skin', async (_event, version, cosmetics = {}) => {
   try {
     const normalized = sanitizeVersion(version);
-    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('Die Cosmetics-Werkstatt ist in dieser Ausgabe für Minecraft 1.21.11 verfügbar.');
+    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('The cosmetics workshop is available in this release for Minecraft 1.21.11.');
     const hat = HATS.includes(cosmetics.hat) ? cosmetics.hat : loadState().hat;
     const emblem = EMBLEMS.includes(cosmetics.emblem) ? cosmetics.emblem : loadState().emblem;
-    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Minecraft-Skin für Vortex Cosmetics wählen', properties: ['openFile'], filters: [{ name: 'Minecraft-Skin (PNG, 64×64)', extensions: ['png'] }] });
+    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Choose Minecraft skin for Vortex Cosmetics', properties: ['openFile'], filters: [{ name: 'Minecraft skin (PNG, 64×64)', extensions: ['png'] }] });
     if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
     const profile = makeCosmeticSkin(normalized, choice.filePaths[0], hat, emblem);
     saveState({ hat, emblem });
-    send('status', { type: 'success', message: 'Cosmetic-Skin erstellt. Öffne in Minecraft die Skin Wardrobe und wähle die neue Variante.' });
+    send('status', { type: 'success', message: 'Cosmetic skin created. In Minecraft open the Skin Wardrobe and select the new variant.' });
     return { ok: true, profile, summary: getInstanceSummary(normalized) };
   } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; }
 });
 ipcMain.handle('import-cosmetic-skin-by-username', async (_event, version, username, cosmetics = {}) => {
   try {
     const normalized = sanitizeVersion(version);
-    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('Die Skin-Verwaltung ist in dieser Ausgabe für Minecraft 1.21.11 verfügbar.');
+    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('Skin management is available in this release for Minecraft 1.21.11.');
     const hat = HATS.includes(cosmetics.hat) ? cosmetics.hat : loadState().hat;
     const emblem = EMBLEMS.includes(cosmetics.emblem) ? cosmetics.emblem : loadState().emblem;
     const imported = await fetchMinecraftSkinByUsername(username);
     const profile = makeCosmeticSkin(normalized, imported.file, hat, emblem);
     saveState({ hat, emblem });
-    send('status', { type: 'success', message: `Skin von ${imported.username} importiert und als Vortex-Variante erstellt.` });
+    send('status', { type: 'success', message: `Imported skin from ${imported.username} and created as a Vortex variant.` });
     return { ok: true, profile, username: imported.username, summary: getInstanceSummary(normalized) };
   } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; }
 });
-ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vortex Cosmetics im Launcher', buttons: ['Verstanden'], message: 'Der Launcher erstellt echte Skin-Varianten für den integrierten Vortex-Cosmetics-Mod.', detail: 'Wähle im Launcher Hut und Rücken-Emblem, importiere anschließend einen eigenen 64×64-Minecraft-Skin. Die generierte PNG-Datei wird direkt in den Skin-Ordner der separaten 1.21.11-Vortex-Instanz gelegt. Im Spiel öffnest du Right Shift → Skins → Scan und klickst die Variante an. Für eine sichtbare Account-Änderung nutzt du im Spiel freiwillig „Visible to everyone“. Offizielle Minecraft-Capes werden nicht vorgetäuscht.' }));
+ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vortex Cosmetics in the Launcher', buttons: ['Got it'], message: 'The launcher creates actual skin variants for the built-in Vortex Cosmetics mod.', detail: 'Select a hat and back emblem in the launcher, then import your own 64×64 Minecraft skin. The generated PNG file is placed directly into the skins folder of the separate 1.21.11 Vortex instance. In the game, open Right Shift → Skins → Scan and click the variant. To make the skin visible to others, optionally set "Visible to everyone" in-game. Official Minecraft capes are not spoofed.' }));
 
 ipcMain.handle('login', async () => {
   try {
-    send('status', { type: 'info', message: 'Microsoft-Anmeldung wird geöffnet …' });
+    send('status', { type: 'info', message: 'Opening Microsoft sign-in…' });
     const authManager = new Auth('select_account');
     const xboxManager = await authManager.launch('electron', { width: 520, height: 720, resizable: false });
     const token = await xboxManager.getMinecraft();
     const profile = token.profile || {};
-    saveAccount({ username: profile.name || 'Minecraft-Spieler', uuid: profile.id || '', auth: token.mclc() });
-    send('status', { type: 'success', message: `Angemeldet als ${account.username}. ${accounts.length} Konto/Konten gespeichert.` });
+    saveAccount({ username: profile.name || 'Minecraft player', uuid: profile.id || '', auth: token.mclc() });
+    send('status', { type: 'success', message: `Signed in as ${account.username}. ${accounts.length} account(s) saved.` });
     return { ok: true, account: accountSummary(account), accounts: accountSummaries() };
-  } catch (error) { send('status', { type: 'error', message: `Anmeldung fehlgeschlagen: ${error.message}` }); return { ok: false, error: error.message }; }
-});
-ipcMain.handle('select-account', (_event, id) => { const selected = selectAccount(id); if (!selected) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'success', message: `Aktives Konto: ${selected.username}` }); return { ok: true, account: accountSummary(selected), accounts: accountSummaries() }; });
-ipcMain.handle('remove-account', (_event, id) => { const removed = removeAccount(id); if (!removed) return { ok: false, error: 'Das gespeicherte Konto wurde nicht gefunden.' }; send('status', { type: 'info', message: `${removed.username} wurde aus dem Launcher entfernt.` }); return { ok: true, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
+  } catch (error) { send('status', { type: 'error', message: `Sign-in failed: ${error.message}` }); return { ok: false, error: error.message }; }
+});ipcMain.handle('select-account', (_event, id) => { const selected = selectAccount(id); if (!selected) return { ok: false, error: 'The stored account was not found.' }; send('status', { type: 'success', message: `Active account: ${selected.username}` }); return { ok: true, account: accountSummary(selected), accounts: accountSummaries() }; });
+ipcMain.handle('remove-account', (_event, id) => { const removed = removeAccount(id); if (!removed) return { ok: false, error: 'The stored account was not found.' }; send('status', { type: 'info', message: `${removed.username} was removed from the launcher.` }); return { ok: true, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
 ipcMain.handle('logout', () => { if (!account) return { ok: true, account: null, accounts: accountSummaries() }; const removed = removeAccount(accountId(account)); return { ok: true, removed: removed ? accountSummary(removed) : null, account: account ? accountSummary(account) : null, accounts: accountSummaries() }; });
 ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = null) => {
   const version = sanitizeVersion(requestedVersion || loadState().selectedVersion);
   const server = requestedServerId ? serverById(requestedServerId) : null;
-  if (!account?.auth) return { ok: false, error: 'Bitte melde zuerst dein Minecraft-Microsoft-Konto an.' };
-  if (!version) return { ok: false, error: 'Wähle eine unterstützte Vortex-Version aus.' };
-  if (requestedServerId && !server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' };
-  if (minecraftProcess) return { ok: false, error: 'Minecraft läuft bereits.' };
+  if (!account?.auth) return { ok: false, error: 'Please sign in to your Minecraft Microsoft account first.' };
+  if (!version) return { ok: false, error: 'Select a supported Vortex version.' };
+  if (requestedServerId && !server) return { ok: false, error: 'The selected server was not found.' };
+  if (minecraftProcess) return { ok: false, error: 'Minecraft is already running.' };
   try {
     const instance = await ensureInstance(version);
     const launcher = new Client();
@@ -1117,13 +1124,13 @@ ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = nu
     launcher.on('data', message => send('log', String(message)));
     launcher.on('download-status', data => send('progress', data));
     launcher.on('progress', data => send('progress', data));
-    send('status', { type: 'info', message: server ? `Starte ${server.name} (${server.address}) mit Vortex Client ${version} …` : `Starte Vortex Client ${version} mit Fabric …` });
+    send('status', { type: 'info', message: server ? `Starting ${server.name} (${server.address}) with Vortex Client ${version} …` : `Starting Vortex Client ${version} with Fabric …` });
     const javaPath = await javaPathForVersion(version);
     const options = { authorization: account.auth, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } };
     if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
     minecraftProcess = await launcher.launch(options);
-    minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft beendet (Code ${code}).` }); });
-    send('status', { type: 'success', message: server ? `Minecraft startet direkt mit ${server.name}.` : 'Minecraft wurde mit der Vortex-Fabric-Instanz gestartet.' });
+    minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft exited (Code ${code}).` }); });
+    send('status', { type: 'success', message: server ? `Minecraft is launching directly with ${server.name}.` : 'Minecraft has been started with the Vortex Fabric instance.' });
     return { ok: true, server: server ? { id: server.id, name: server.name, address: server.address } : null };
-  } catch (error) { minecraftProcess = null; send('status', { type: 'error', message: `Start fehlgeschlagen: ${error.message}` }); return { ok: false, error: error.message }; }
+  } catch (error) { minecraftProcess = null; send('status', { type: 'error', message: `Launch failed: ${error.message}` }); return { ok: false, error: error.message }; }
 });

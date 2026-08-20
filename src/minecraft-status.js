@@ -29,7 +29,7 @@ function decodeVarInt(buffer, offset = 0) {
     if (!(byte & 0x80)) return { value, size: index + 1 };
     shift += 7;
   }
-  throw new Error('Ungültige Minecraft-VarInt-Antwort.');
+  throw new Error('Invalid Minecraft VarInt response.');
 }
 
 function minecraftString(value) {
@@ -47,7 +47,7 @@ function parseAddress(address) {
   const hasPort = split > -1 && input.indexOf(':') === split;
   const host = hasPort ? input.slice(0, split) : input;
   const port = hasPort ? Number(input.slice(split + 1)) : DEFAULT_PORT;
-  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Ungültige Serveradresse.');
+  if (!host || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid server address.');
   return { host, port, hasPort };
 }
 
@@ -61,7 +61,7 @@ async function resolveEndpoint(address) {
       return { host: candidate.name.replace(/\.$/, ''), port: candidate.port, hasPort: false, handshakeHost: parsed.host };
     }
   } catch (_) {
-    // Ein fehlender SRV-Eintrag ist bei Minecraft-Servern normal. Dann wird der Standardport verwendet.
+    // A missing SRV record is normal for Minecraft servers; use the default port in that case.
   }
   return parsed;
 }
@@ -109,30 +109,30 @@ function receiveStatus(socket) {
       resolve(result);
     };
 
-    socket.setTimeout(CONNECT_TIMEOUT_MS, () => fail(new Error('Der Server hat nicht rechtzeitig geantwortet.')));
-    socket.once('error', () => fail(new Error('Der Minecraft-Server ist nicht erreichbar.')));
+    socket.setTimeout(CONNECT_TIMEOUT_MS, () => fail(new Error('The server did not respond in time.')));
+    socket.once('error', () => fail(new Error('The Minecraft server is unreachable.')));
     socket.on('data', chunk => {
       if (settled) return;
       received = Buffer.concat([received, chunk]);
-      if (received.length > MAX_PACKET_SIZE) return fail(new Error('Die Serverantwort ist zu groß.'));
+      if (received.length > MAX_PACKET_SIZE) return fail(new Error('The server response is too large.'));
       try {
         const packetLength = decodeVarInt(received);
         if (!packetLength) return;
-        if (packetLength.value < 1 || packetLength.value > MAX_PACKET_SIZE) return fail(new Error('Ungültige Serverantwort.'));
+        if (packetLength.value < 1 || packetLength.value > MAX_PACKET_SIZE) return fail(new Error('Invalid server response.'));
         const packetStart = packetLength.size;
         if (received.length < packetStart + packetLength.value) return;
         const payload = received.subarray(packetStart, packetStart + packetLength.value);
         const packetId = decodeVarInt(payload);
-        if (!packetId || packetId.value !== 0) return fail(new Error('Ungültige Minecraft-Statusantwort.'));
+        if (!packetId || packetId.value !== 0) return fail(new Error('Invalid Minecraft status response.'));
         const jsonLength = decodeVarInt(payload, packetId.size);
-        if (!jsonLength || jsonLength.value < 2 || jsonLength.value > MAX_PACKET_SIZE) return fail(new Error('Ungültige Serverbeschreibung.'));
+        if (!jsonLength || jsonLength.value < 2 || jsonLength.value > MAX_PACKET_SIZE) return fail(new Error('Invalid server description.'));
         const start = packetId.size + jsonLength.size;
         const end = start + jsonLength.value;
-        if (end > payload.length) return fail(new Error('Unvollständige Serverbeschreibung.'));
+        if (end > payload.length) return fail(new Error('Incomplete server description.'));
         const raw = payload.subarray(start, end).toString('utf8');
         finish(JSON.parse(raw));
       } catch (error) {
-        fail(new Error(`Minecraft-Status konnte nicht gelesen werden: ${error.message}`));
+        fail(new Error(`Minecraft status could not be read: ${error.message}`));
       }
     });
   });
@@ -158,8 +158,8 @@ async function requestStatus(endpoint, handshakeHost) {
         reject(error);
       }
     });
-    socket.once('error', () => reject(new Error('Der Minecraft-Server ist nicht erreichbar.')));
-    socket.setTimeout(CONNECT_TIMEOUT_MS, () => reject(new Error('Der Server hat nicht rechtzeitig geantwortet.')));
+    socket.once('error', () => reject(new Error('The Minecraft server is unreachable.')));
+    socket.setTimeout(CONNECT_TIMEOUT_MS, () => reject(new Error('The server did not respond in time.')));
   });
 }
 
@@ -178,14 +178,14 @@ async function pingMinecraftServer(address) {
   const description = normaliseDescription(status.description);
   return {
     online: true,
-    description: description || 'Der Server hat keine Beschreibung hinterlegt.',
+    description: description || 'This server has not set a description.',
     favicon: safeFavicon(status.favicon),
     hasFavicon: Boolean(safeFavicon(status.favicon)),
     players: {
       online: Math.max(0, Number(status.players?.online) || 0),
       max: Math.max(0, Number(status.players?.max) || 0)
     },
-    version: String(status.version?.name || '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Unbekannte Version',
+    version: String(status.version?.name || '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Unknown version',
     latency: Date.now() - startedAt,
     checkedAt: new Date().toISOString()
   };
@@ -197,14 +197,14 @@ async function getMinecraftServerStatus(address) {
   } catch (error) {
     return {
       online: false,
-      description: 'Serverstatus momentan nicht erreichbar.',
+      description: 'Server status is currently unavailable.',
       favicon: null,
       hasFavicon: false,
       players: { online: 0, max: 0 },
       version: null,
       latency: null,
       checkedAt: new Date().toISOString(),
-      error: error.message || 'Der Minecraft-Server ist nicht erreichbar.'
+      error: error.message || 'The Minecraft server is unreachable.'
     };
   }
 }
