@@ -13,6 +13,7 @@ const SUPPORTED_VERSIONS = ['1.21.11', '26.1.1', '26.1.2', '26.2'];
 const COSMETICS_MOD_VERSION = '1.21.11';
 const HATS = ['none', 'vortex-cap', 'neon-halo', 'void-crown', 'cyber-headphones', 'slime-antenna'];
 const EMBLEMS = ['none', 'vortex-crest', 'nebula-mark', 'void-rune'];
+const BUNDLED_TEXTURED_CAPES = new Set(EMBLEMS.filter(id => id !== 'none'));
 let mainWindow;
 let minecraftProcess;
 let account = null;
@@ -48,14 +49,16 @@ function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileS
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choice.json'); }
 function websiteCapeConfigPath(version) { return path.join(instanceRoot(version), 'config', 'vortex-client', 'cosmetics.json'); }
+function bundledCapeAsset(capeId) { return BUNDLED_TEXTURED_CAPES.has(capeId) ? path.join(assetsRoot(), 'cosmetics', 'capes', `${capeId}.png`) : null; }
+function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
 function isVortexCosmeticUrl(value) { try { const url = new URL(String(value || '')); return url.protocol === 'https:' && ['vortexclient.at', 'vortex-client.onrender.com'].includes(url.hostname) && /^\/cosmetics\//.test(url.pathname); } catch (_) { return false; } }
 function normalizeCapeCatalogue(data) { const seen = new Set(); return (Array.isArray(data?.capes) ? data.capes : []).map(entry => ({ id: String(entry?.id || ''), name: String(entry?.name || '').trim().slice(0, 60), texture: String(entry?.texture || ''), preview: String(entry?.preview || '') })).filter(entry => /^[a-z0-9_-]{1,48}$/i.test(entry.id) && entry.name && isVortexCosmeticUrl(entry.texture) && isVortexCosmeticUrl(entry.preview) && !seen.has(entry.id) && Boolean(seen.add(entry.id))).slice(0, 60); }
 async function loadWebsiteCapeCatalogue() { const response = await fetch(COSMETICS_CATALOGUE_URL, { headers: { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Cape-Katalog antwortet mit ${response.status}.`); return normalizeCapeCatalogue(await response.json()); }
-function applyWebsiteCapeChoice(version) { const choice = loadJson(websiteCapeChoiceFile(), null); if (!choice || (choice.cape !== null && !/^[a-z0-9_-]{1,48}$/i.test(choice.cape))) return; try { const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
+function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || /^[a-z0-9_-]{1,48}$/i.test(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
 const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.1 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.3 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -660,7 +663,7 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
   const target = path.join(skinsRoot(version), generatedName);
   fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: 'Vortex Client Launcher 0.9.1' };
+  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: `Vortex Client Launcher ${app.getVersion()}` };
   writeJson(profileFile(version), profile);
   return profile;
 }
@@ -727,6 +730,11 @@ ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const emblem = cosmetics.emblem ?? state.emblem;
   if (!HATS.includes(hat) || !EMBLEMS.includes(emblem)) return { ok: false, error: 'Unbekanntes Cosmetic.' };
   const saved = saveState({ hat, emblem });
+  if (Object.prototype.hasOwnProperty.call(cosmetics, 'emblem')) {
+    const choice = { cape: saved.emblem === 'none' ? null : saved.emblem, updatedAt: new Date().toISOString(), source: 'bodyfit-cosmetic' };
+    writeJson(websiteCapeChoiceFile(), choice);
+    for (const version of SUPPORTED_VERSIONS) applyWebsiteCapeChoice(version);
+  }
   const previousProfile = loadCosmeticProfile(COSMETICS_MOD_VERSION);
   let profile = null;
   if (previousProfile?.baseSkin && /^[a-z0-9][a-z0-9._-]*\.png$/i.test(previousProfile.baseSkin)) {
