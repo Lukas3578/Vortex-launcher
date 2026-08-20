@@ -44,6 +44,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.13',
+    title: 'Serverkarten korrigiert',
+    summary: 'Server-Favicons erscheinen jetzt dezent; die störende riesige Buchstabenanzeige wurde entfernt.',
+    items: [
+      'Das echte Minecraft-Server-Favicon wird klein in der oberen rechten Ecke der Karte angezeigt.',
+      'Der großflächige Buchstaben-Platzhalter und seine CSS-Regel wurden vollständig entfernt.',
+      'Server ohne Favicon zeigen nur noch den ruhigen, neutralen Kartenhintergrund.'
+    ]
+  },
+  {
     version: '0.9.12',
     title: 'Echte Serverdaten & Website-Cape',
     summary: 'Die Server-Galerie liest jetzt direkt aus Minecraft; eine bestätigte Website-Anmeldung schaltet das Vortex Member Cape frei.',
@@ -245,7 +255,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.12 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.13 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
