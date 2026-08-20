@@ -45,6 +45,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.19',
+    title: 'Vortex Cosmetics collection redesigned',
+    summary: 'Every built-in Vortex cape and 3D hat now has a cohesive, high-contrast Minecraft pixel-art redesign.',
+    items: [
+      'Rebuilt Vortex Crest, Nebula Mark and Void Rune as bespoke woven 64×64 cape textures with bold readable emblems and matching 128×128 previews.',
+      'Redesigned every 3D hat material: Vortex Cap, Neon Halo, Void Crown, Cyber Headphones and Slime Antenna now use premium Vortex textures with stronger lighting, seams, alloy trim and signature accents.',
+      'Updated the 1.21.11 Vortex Cosmetics bundle to 2.29.7 while retaining the animated 3D cape, Elytra and head-following hat renderers.'
+    ]
+  },
+  {
     version: '0.9.18',
     title: 'Simple Voice Chat is no longer removed',
     summary: 'Simple Voice Chat can now remain in every Vortex Fabric instance after installation.',
@@ -335,7 +345,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.18 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.19 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
