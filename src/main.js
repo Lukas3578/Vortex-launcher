@@ -44,6 +44,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.15',
+    title: 'Vortex Client JAR refresh',
+    summary: 'The supplied Vortex Client Fabric JARs are now verified and bundled with their matching Minecraft instances.',
+    items: [
+      'Minecraft 1.21.11 now bundles the supplied Vortex Client 2.28.3 Fabric JAR.',
+      'The supplied 26.1.1, 26.1.2 and 26.2 JARs were verified as byte-identical to the matching bundles already included in the launcher.',
+      'Every Vortex JAR is protected by instance maintenance and restored automatically when it is removed or changed.'
+    ]
+  },
+  {
     version: '0.9.14',
     title: 'Smoother Logs & Full English UI',
     summary: 'The launcher interface and runtime messages are now consistently English, with a more readable system timeline.',
@@ -265,7 +275,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.14 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.15 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
