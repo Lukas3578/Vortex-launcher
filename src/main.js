@@ -9,6 +9,7 @@ const { autoUpdater } = require('electron-updater');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { createAiStudio } = require('./ai-studio');
+const { getMinecraftServerStatus } = require('./minecraft-status');
 
 const execFileAsync = promisify(execFile);
 
@@ -26,6 +27,9 @@ let updateState = { status: 'idle', currentVersion: app.getVersion(), availableV
 let instanceMaintenanceTimer = null;
 let instanceMaintenanceRunning = false;
 let lastMaintenance = { checkedAt: null, repairedVersions: [] };
+const serverStatusCache = new Map();
+const serverStatusPending = new Map();
+const SERVER_STATUS_CACHE_MS = 90 * 1000;
 
 const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
 const instancesRoot = path.join(dataRoot, 'instances');
@@ -33,13 +37,23 @@ const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
 const serversFile = path.join(dataRoot, 'servers.json');
-const serverImagesRoot = path.join(dataRoot, 'server-images');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
-const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true, description: 'Der offizielle VortexPvP-Server. Starte direkt aus deiner Vortex-Fabric-Instanz.', imageKind: 'builtin' });
+const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.12',
+    title: 'Echte Serverdaten & Website-Cape',
+    summary: 'Die Server-Galerie liest jetzt direkt aus Minecraft; eine bestätigte Website-Anmeldung schaltet das Vortex Member Cape frei.',
+    items: [
+      'Serverkarten laden das echte Minecraft-Favicon, die MOTD, die Version und die aktuelle Spielerzahl direkt vom jeweiligen Server.',
+      'Eigene Beschreibungen und lokale Serverbilder wurden entfernt: Die sichtbaren Daten können nicht mehr manuell verändert werden.',
+      'Minecraft-SRV-Einträge werden berücksichtigt, damit Domains mit einem abweichenden Serverport zuverlässig angezeigt werden.',
+      'Nach der Anmeldung mit einem Vortex-Website-Konto wird das exklusive Vortex Member Cape sicher freigeschaltet und lokal für deine Instanzen installiert.'
+    ]
+  },
   {
     version: '0.9.11',
     title: 'Visuelle Server-Galerie',
@@ -181,14 +195,57 @@ function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choi
 function websiteCapeConfigPath(version) { return path.join(instanceRoot(version), 'config', 'vortex-client', 'cosmetics.json'); }
 function bundledCapeAsset(capeId) { return BUNDLED_TEXTURED_CAPES.has(capeId) ? path.join(assetsRoot(), 'cosmetics', 'capes', `${capeId}.png`) : null; }
 function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
-function isVortexCosmeticUrl(value) { try { const url = new URL(String(value || '')); return url.protocol === 'https:' && ['vortexclient.at', 'vortex-client.onrender.com'].includes(url.hostname) && /^\/cosmetics\//.test(url.pathname); } catch (_) { return false; } }
-function normalizeCapeCatalogue(data) { const seen = new Set(); return (Array.isArray(data?.capes) ? data.capes : []).map(entry => ({ id: String(entry?.id || ''), name: String(entry?.name || '').trim().slice(0, 60), texture: String(entry?.texture || ''), preview: String(entry?.preview || '') })).filter(entry => /^[a-z0-9_-]{1,48}$/i.test(entry.id) && entry.name && isVortexCosmeticUrl(entry.texture) && isVortexCosmeticUrl(entry.preview) && !seen.has(entry.id) && Boolean(seen.add(entry.id))).slice(0, 60); }
-async function loadWebsiteCapeCatalogue() { const response = await fetch(COSMETICS_CATALOGUE_URL, { headers: { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(15000) }); if (!response.ok) throw new Error(`Cape-Katalog antwortet mit ${response.status}.`); return normalizeCapeCatalogue(await response.json()); }
-function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || /^[a-z0-9_-]{1,48}$/i.test(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
+function isCapeId(value) { return /^[a-z0-9_-]{1,48}$/i.test(String(value || '')); }
+function normalizeWebsiteCapeEntitlements(data) {
+  const seen = new Set();
+  return (Array.isArray(data?.capes) ? data.capes : []).map(entry => ({
+    id: String(entry?.id || ''),
+    name: String(entry?.name || '').trim().slice(0, 60),
+    description: String(entry?.description || '').trim().slice(0, 180),
+    texturePath: String(entry?.texturePath || ''),
+    previewPath: String(entry?.previewPath || '')
+  })).filter(entry => isCapeId(entry.id) && entry.name && entry.texturePath === `/api/capes/${entry.id}/texture` && entry.previewPath === `/api/capes/${entry.id}/preview` && !seen.has(entry.id) && Boolean(seen.add(entry.id))).slice(0, 20);
+}
+async function loadWebsiteCapeEntitlements() {
+  const result = await communityFetch('/api/capes/launcher');
+  const capes = normalizeWebsiteCapeEntitlements(result);
+  return Promise.all(capes.map(async cape => ({ ...cape, preview: `data:image/png;base64,${(await downloadWebsiteCape(cape, true)).toString('base64')}` })));
+}
+function validateWebsiteCapePng(bytes, preview = false) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 100 || bytes.length > (preview ? 1024 * 1024 : 256 * 1024)) throw new Error('Die Cape-Datei hat eine ungültige Größe.');
+  let image;
+  try { image = PNG.sync.read(bytes); } catch (_) { throw new Error('Die Website hat keine gültige PNG-Cape-Datei geliefert.'); }
+  if (preview ? (image.width < 64 || image.height < 64 || image.width > 512 || image.height > 512) : (image.width !== 64 || image.height !== 64)) throw new Error(preview ? 'Die Cape-Vorschau hat ein ungültiges Format.' : 'Das Cape muss eine 64×64-PNG sein.');
+  return bytes;
+}
+async function downloadWebsiteCape(cape, preview = false) {
+  const route = preview ? cape.previewPath : cape.texturePath;
+  return validateWebsiteCapePng(await communityBinaryFetch(route), preview);
+}
+function installWebsiteCape(capeId, bytes) {
+  if (!isCapeId(capeId)) throw new Error('Ungültige Cape-ID.');
+  let written = 0;
+  const choice = { cape: capeId, updatedAt: new Date().toISOString(), source: 'website-account' };
+  for (const version of SUPPORTED_VERSIONS) {
+    const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`);
+    ensureDir(path.dirname(target));
+    fs.writeFileSync(target, bytes);
+    writeJson(websiteCapeConfigPath(version), choice);
+    written += 1;
+  }
+  writeJson(websiteCapeChoiceFile(), choice);
+  return { choice, written };
+}
+function clearWebsiteCape() {
+  const choice = { cape: null, updatedAt: new Date().toISOString(), source: 'website-account' };
+  writeJson(websiteCapeChoiceFile(), choice);
+  for (const version of SUPPORTED_VERSIONS) { ensureDir(path.dirname(websiteCapeConfigPath(version))); writeJson(websiteCapeConfigPath(version), choice); }
+  return choice;
+}
+function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const COSMETICS_CATALOGUE_URL = 'https://vortex-client.onrender.com/cosmetics.json';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.11 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.12 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -391,6 +448,20 @@ async function communityFetch(route, options = {}) {
   if (!response.ok) throw new Error(payload?.error || payload || `Community antwortet mit ${response.status}.`);
   return payload;
 }
+async function communityBinaryFetch(route) {
+  if (!/^\/api\/capes\/[a-z0-9_-]{1,48}\/(?:texture|preview)$/i.test(String(route || ''))) throw new Error('Ungültiger Cape-Downloadpfad.');
+  const cookie = await communityCookieHeader();
+  const headers = { Accept: 'image/png', 'User-Agent': MODRINTH_USER_AGENT };
+  if (cookie) headers.Cookie = cookie;
+  const response = await fetch(`${COMMUNITY_BASE_URL}${route}`, { headers, signal: AbortSignal.timeout(30000) });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null);
+    throw new Error(payload?.error || `Cape-Datei antwortet mit ${response.status}.`);
+  }
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('image/png')) throw new Error('Die Website hat keine PNG-Cape-Datei geliefert.');
+  return Buffer.from(await response.arrayBuffer());
+}
 async function getCommunityState() {
   let websiteAccount = null;
   try { websiteAccount = await communityFetch('/api/auth/me'); }
@@ -557,30 +628,38 @@ function normalizeServerAddress(value) {
   if (port && (!/^\d{1,5}$/.test(port) || Number(port) < 1 || Number(port) > 65535)) return null;
   return port ? `${host}:${Number(port)}` : host;
 }
-function serverImagePath(server) {
-  const file = String(server?.imageFile || '');
-  if (!/^[a-z0-9][a-z0-9._-]{3,100}\.(png|jpe?g|webp)$/i.test(file)) return null;
-  const target = path.join(serverImagesRoot, file);
-  return target.startsWith(`${serverImagesRoot}${path.sep}`) ? target : null;
-}
 function normalizeServer(entry) {
   const name = String(entry?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42);
   const address = normalizeServerAddress(entry?.address);
   const id = String(entry?.id || '');
   if (!name || !address || !/^[a-z0-9][a-z0-9_-]{3,60}$/i.test(id)) return null;
-  const candidate = { id, name, address, official: false, description: String(entry?.description || '').trim().slice(0, 120), imageFile: String(entry?.imageFile || ''), addedAt: String(entry?.addedAt || '') };
-  if (!serverImagePath(candidate) || !exists(serverImagePath(candidate))) candidate.imageFile = '';
-  return candidate;
+  return { id, name, address, official: false, addedAt: String(entry?.addedAt || '') };
 }
 function serverLibrary() {
   const stored = loadJson(serversFile, {}); const seen = new Set([OFFICIAL_SERVER.address]);
   const custom = Array.isArray(stored?.servers) ? stored.servers.map(normalizeServer).filter(Boolean).filter(server => !seen.has(server.address) && Boolean(seen.add(server.address))).slice(0, 50) : [];
   return [OFFICIAL_SERVER, ...custom];
 }
-function serverSummary(server) { return { id: server.id, name: server.name, address: server.address, official: Boolean(server.official), description: server.description || '', imageKind: server.imageKind || (server.imageFile ? 'custom' : 'none'), hasImage: Boolean(server.official || server.imageFile), addedAt: server.addedAt || '' }; }
+function cachedServerStatus(id) { return serverStatusCache.get(String(id || ''))?.status || null; }
+function serverSummary(server) { return { id: server.id, name: server.name, address: server.address, official: Boolean(server.official), status: cachedServerStatus(server.id), addedAt: server.addedAt || '' }; }
 function serverSummaries() { return serverLibrary().map(serverSummary); }
-function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 2, servers: servers.filter(server => !server.official) }); }
+function saveServerLibrary(servers) { writeJson(serversFile, { schemaVersion: 3, servers: servers.filter(server => !server.official).map(({ id, name, address, addedAt }) => ({ id, name, address, addedAt })) }); }
 function serverById(id) { return serverLibrary().find(server => server.id === String(id || '')) || null; }
+async function refreshServerStatus(id, force = false) {
+  const server = serverById(id);
+  if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' };
+  const cached = serverStatusCache.get(server.id);
+  if (!force && cached && Date.now() - cached.updatedAt < SERVER_STATUS_CACHE_MS) return { ok: true, server: serverSummary(server), status: cached.status, cached: true };
+  if (serverStatusPending.has(server.id)) return serverStatusPending.get(server.id);
+  const task = (async () => {
+    const status = await getMinecraftServerStatus(server.address);
+    serverStatusCache.set(server.id, { status, updatedAt: Date.now() });
+    return { ok: true, server: serverSummary(server), status, cached: false };
+  })();
+  serverStatusPending.set(server.id, task);
+  try { return await task; }
+  finally { if (serverStatusPending.get(server.id) === task) serverStatusPending.delete(server.id); }
+}
 function loadState() {
   const legacy = loadJson(stateFile, {});
   return {
@@ -889,21 +968,13 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
-ipcMain.handle('get-server-image', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: true, image: 'builtin', hasImage: true }; const image = serverImagePath(server); return { ok: true, image: image && exists(image) ? dataUriForImage(image) : null, hasImage: Boolean(image && exists(image)) }; });
-ipcMain.handle('select-server-image', async (_event, id) => {
-  try {
-    const server = serverById(id); if (!server) throw new Error('Der Server wurde nicht gefunden.'); if (server.official) throw new Error('Das Bild des offiziellen VortexPvP-Servers wird vom Launcher verwaltet.');
-    const choice = await dialog.showOpenDialog(mainWindow, { title: `Serverbild für ${server.name} wählen`, properties: ['openFile'], filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp'] }] });
-    if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
-    const source = choice.filePaths[0]; const stat = fs.statSync(source); if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) throw new Error('Wähle ein Bild mit maximal 5 MB.');
-    const extension = path.extname(source).toLowerCase(); if (!['.png', '.jpg', '.jpeg', '.webp'].includes(extension)) throw new Error('Dieses Bildformat wird nicht unterstützt.');
-    ensureDir(serverImagesRoot); const targetName = `server-${safeFileName(server.id)}${extension}`; const target = path.join(serverImagesRoot, targetName); const old = serverImagePath(server); fs.copyFileSync(source, target); if (old && old !== target) try { fs.rmSync(old, { force: true }); } catch (_) {}
-    const saved = serverLibrary().map(item => item.id === server.id ? { ...item, imageFile: targetName } : item); saveServerLibrary(saved); return { ok: true, image: dataUriForImage(target), servers: serverSummaries() };
-  } catch (error) { return { ok: false, error: error.message }; }
+ipcMain.handle('refresh-server-status', async (_event, id, force = false) => {
+  try { return await refreshServerStatus(id, Boolean(force)); }
+  catch (error) { return { ok: false, error: error.message || 'Der Minecraft-Status konnte nicht aktualisiert werden.' }; }
 });
-ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, description: String(input?.description || '').trim().slice(0, 120), imageFile: '', addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server: serverSummary(server), servers: serverSummaries(), state }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('add-server', (_event, input) => { try { const address = normalizeServerAddress(input?.address); const name = String(input?.name || '').trim().replace(/\s+/g, ' ').slice(0, 42); if (!name) throw new Error('Gib einen Servernamen ein.'); if (!address) throw new Error('Gib eine gültige Server-IP oder Domain ein.'); const existing = serverLibrary(); if (existing.some(server => server.address === address)) throw new Error('Dieser Server ist bereits in deiner Bibliothek.'); const server = { id: `server-${crypto.randomUUID()}`, name, address, official: false, addedAt: new Date().toISOString() }; saveServerLibrary([...existing, server]); const state = saveState({ selectedServerId: server.id }); return { ok: true, server: serverSummary(server), servers: serverSummaries(), state }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('select-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der ausgewählte Server wurde nicht gefunden.' }; return { ok: true, server, state: saveState({ selectedServerId: server.id }) }; });
-ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const image = serverImagePath(server); const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); if (image) try { fs.rmSync(image, { force: true }); } catch (_) {} const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverSummaries(), state }; });
+ipcMain.handle('remove-server', (_event, id) => { const server = serverById(id); if (!server) return { ok: false, error: 'Der Server wurde nicht gefunden.' }; if (server.official) return { ok: false, error: 'Der offizielle VortexPvP-Server bleibt dauerhaft verfügbar.' }; const remaining = serverLibrary().filter(item => item.id !== server.id); saveServerLibrary(remaining); serverStatusCache.delete(server.id); serverStatusPending.delete(server.id); const state = saveState({ selectedServerId: loadState().selectedServerId === server.id ? OFFICIAL_SERVER.id : loadState().selectedServerId }); return { ok: true, servers: serverSummaries(), state }; });
 ipcMain.handle('mark-release-news-seen', () => ({ ok: true, news: markReleaseNewsSeen() }));
 ipcMain.handle('get-account-avatar', async (_event, id) => { const selected = accounts.find(entry => accountId(entry) === String(id || '')); return { ok: Boolean(selected), avatar: selected ? await accountAvatar(selected) : null, custom: Boolean(selected && dataUriForImage(profileImagePath(selected))) }; });
 ipcMain.handle('select-account-avatar', async (_event, id) => {
@@ -931,8 +1002,8 @@ ipcMain.handle('ai-create-mod-project', async (_event, prompt) => { try { const 
 ipcMain.handle('ai-open-output', (_event, kind) => { const folder = aiStudio.openOutputFolder(kind); return shell.openPath(folder); });
 ipcMain.handle('open-launch-log', () => { if (!exists(launchLogPath())) return { ok: false, error: 'Es wurde noch kein Launcher-Protokoll erstellt.' }; shell.showItemInFolder(launchLogPath()); return { ok: true }; });
 ipcMain.handle('open-crash-log', () => { if (!exists(crashLogPath())) return { ok: false, error: 'Es wurde noch kein Fehlerprotokoll erstellt.' }; shell.showItemInFolder(crashLogPath()); return { ok: true }; });
-ipcMain.handle('get-website-cape-catalogue', async () => { try { return { ok: true, capes: await loadWebsiteCapeCatalogue(), choice: loadJson(websiteCapeChoiceFile(), { cape: null }) }; } catch (error) { return { ok: false, capes: [], choice: loadJson(websiteCapeChoiceFile(), { cape: null }), error: error.message }; } });
-ipcMain.handle('select-website-cape', async (_event, capeId) => { try { const normalizedId = capeId === null || capeId === '' ? null : String(capeId); const capes = await loadWebsiteCapeCatalogue(); if (normalizedId !== null && !capes.some(cape => cape.id === normalizedId)) throw new Error('Dieses Cape ist nicht im offiziellen Vortex-Katalog vorhanden.'); const choice = { cape: normalizedId, updatedAt: new Date().toISOString() }; writeJson(websiteCapeChoiceFile(), choice); let written = 0; for (const version of SUPPORTED_VERSIONS) { if (!exists(instanceRoot(version))) continue; applyWebsiteCapeChoice(version); written += 1; } send('log', normalizedId ? `Website-Cape ausgewählt: ${normalizedId}.` : 'Website-Cape entfernt.'); return { ok: true, choice, written }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('get-website-cape-catalogue', async () => { const choice = loadJson(websiteCapeChoiceFile(), { cape: null }); try { return { ok: true, capes: await loadWebsiteCapeEntitlements(), choice, needsWebsiteLogin: false }; } catch (error) { const community = await getCommunityState(); return { ok: true, capes: [], choice, needsWebsiteLogin: !community.websiteAccount?.username, error: error.message }; } });
+ipcMain.handle('select-website-cape', async (_event, capeId) => { try { const normalizedId = capeId === null || capeId === '' ? null : String(capeId); if (normalizedId === null) { const choice = clearWebsiteCape(); send('log', 'Website-Cape entfernt.'); return { ok: true, choice, written: SUPPORTED_VERSIONS.length }; } const capes = await loadWebsiteCapeEntitlements(); const cape = capes.find(entry => entry.id === normalizedId); if (!cape) throw new Error('Dieses Cape ist für dein angemeldetes Website-Konto nicht freigeschaltet.'); const result = installWebsiteCape(cape.id, await downloadWebsiteCape(cape)); send('log', `Website-Cape freigeschaltet und installiert: ${cape.id}.`); return { ok: true, ...result }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-get-state', () => getCommunityState());
 ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });

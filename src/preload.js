@@ -3,8 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('vortex', {
   getState: () => ipcRenderer.invoke('get-state'),
   listServers: () => ipcRenderer.invoke('list-servers'),
-  getServerImage: (id) => ipcRenderer.invoke('get-server-image', id),
-  selectServerImage: (id) => ipcRenderer.invoke('select-server-image', id),
+  refreshServerStatus: (id, force = false) => ipcRenderer.invoke('refresh-server-status', id, force),
   addServer: (server) => ipcRenderer.invoke('add-server', server),
   selectServer: (id) => ipcRenderer.invoke('select-server', id),
   removeServer: (id) => ipcRenderer.invoke('remove-server', id),
