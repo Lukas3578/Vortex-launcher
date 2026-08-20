@@ -26,6 +26,9 @@ let accounts = [];
 let updateState = { status: 'idle', currentVersion: app.getVersion(), availableVersion: null, progress: 0, error: null };
 let instanceMaintenanceTimer = null;
 let instanceMaintenanceRunning = false;
+let updateCheckTimer = null;
+let updateCheckInFlight = false;
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let lastMaintenance = { checkedAt: null, repairedVersions: [] };
 const serverStatusCache = new Map();
 const serverStatusPending = new Map();
@@ -44,6 +47,17 @@ const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUP
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.21',
+    title: 'Cape rendering and live update repair',
+    summary: 'Active Vortex capes now explicitly replace the visible Minecraft account cape, and new GitHub releases are checked while the launcher remains open.',
+    items: [
+      'Added a render-state cape visibility guard: an active Vortex cape disables only the local official Minecraft cape before the vanilla cape renderer runs.',
+      'Strengthened local-player matching for Vortex cosmetics and kept the direct custom cape renderer active independently of the vanilla cape flag.',
+      'The launcher now checks GitHub Releases shortly after opening and every five minutes while it stays open, so a new update is offered without restarting the launcher.',
+      'Updated the 1.21.11 Vortex Cosmetics bundle to 2.29.9.'
+    ]
+  },
   {
     version: '0.9.20',
     title: 'Vanilla cape correction',
@@ -355,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.20 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.21 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -670,8 +684,20 @@ function setupAutoUpdater() {
 }
 async function checkForUpdates() {
   if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates are disabled in development mode.' });
+  // Electron-updater permits only one metadata request at a time. Manual and
+  // background checks therefore share this guard instead of racing each other.
+  if (updateCheckInFlight) return updateState;
+  updateCheckInFlight = true;
   try { await autoUpdater.checkForUpdates(); return updateState; }
   catch (error) { return setUpdateState({ status: 'error', error: error.message || String(error) }); }
+  finally { updateCheckInFlight = false; }
+}
+function startBackgroundUpdateChecks() {
+  if (!app.isPackaged) return;
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
+  // Check shortly after launch and then repeatedly while the launcher remains open.
+  setTimeout(() => { void checkForUpdates(); }, 2000);
+  updateCheckTimer = setInterval(() => { void checkForUpdates(); }, UPDATE_CHECK_INTERVAL_MS);
 }
 async function downloadUpdate() {
   if (!app.isPackaged) return setUpdateState({ status: 'dev', error: 'Updates are disabled in development mode.' });
@@ -1134,9 +1160,12 @@ app.whenReady().then(() => {
   setupAutoUpdater();
   createWindow();
   startInstanceMaintenance();
-  setTimeout(() => { void checkForUpdates(); }, 2000);
+  startBackgroundUpdateChecks();
 });
-app.on('before-quit', () => { if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer); });
+app.on('before-quit', () => {
+  if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer);
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
+});
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
