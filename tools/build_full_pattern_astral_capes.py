@@ -44,15 +44,18 @@ front = full_texture.resize((10, 16), Image.Resampling.BOX).convert("RGBA")
 front = make_opaque_pattern(front)
 
 for cape_id in CAPE_IDS:
-    atlas = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    atlas.paste(front, (0, 0))
-    # Cape edge and underside UV strips continue the same patterned colors.
-    for y in range(16):
-        atlas.putpixel((10, y), front.getpixel((9, y)))
-        atlas.putpixel((11, y), front.getpixel((8, y)))
-    for x in range(10):
-        atlas.putpixel((x, 16), front.getpixel((x, 15)))
-        atlas.putpixel((x, 17), front.getpixel((x, 14)))
+    # The Minecraft cuboid can address multiple UV rectangles for its front, back,
+    # both narrow sides, top and bottom. Fill the COMPLETE 64×64 atlas with the
+    # same opaque Astral Vortex tile first, then every possible renderer UV lookup
+    # has colored pixels rather than a transparent/black fallback.
+    atlas = Image.new("RGBA", (64, 64), (0, 0, 0, 255))
+    for y in range(64):
+        for x in range(64):
+            atlas.putpixel((x, y), front.getpixel((x % front.width, y % front.height)))
+
+    # Preserve a coherent primary motif on the conventional front/back cape faces.
+    atlas.paste(front, (1, 1))
+    atlas.paste(front.transpose(Image.Transpose.FLIP_LEFT_RIGHT), (12, 1))
     atlas.save(TEXTURES / f"{cape_id}.png")
 
     # Launcher card: a square, fully patterned preview without a black cape surface.

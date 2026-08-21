@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.35',
-    title: 'Minecraft cape texture loading repair',
-    summary: 'The fixed back-mounted renderer now resolves the selected cape directly from its own embedded Minecraft resources, independent of the Cosmetics core texture registration.',
+    version: '0.9.36',
+    title: 'Full cape UV coverage repair',
+    summary: 'All 64×64 texture atlas pixels used by the real cape cuboid are now filled with the Astral Vortex pattern, so the reverse and edge faces can no longer render black.',
     items: [
-      'Embedded the selected Astral Vortex cape textures directly inside the fixed renderer mod under the vortexplus resource namespace.',
-      'The local renderer now reads config/vortex-client/cosmetics.json directly and resolves the chosen cape without relying on the core cosmetic texture registration.',
-      'Added a renderer fallback for the local player when Minecraft provides a different render-state entity ID.',
-      'Kept UUID-based multiplayer presence while remote capes use the same embedded textures.'
+      'Filled all 4,096 pixels of each 64×64 Cape atlas with opaque, non-black Astral Vortex pattern data.',
+      'Applied the full pattern to front, back, both side strips, top, bottom and every other UV rectangle used by the Minecraft cape cuboid.',
+      'Mirrored the primary motif onto the conventional front and back cape faces for a coherent moving in-game result.',
+      'Bundled the fully covered atlases directly inside the fixed Vortex Plus renderer mod.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.35 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.36 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
