@@ -1,6 +1,6 @@
 {
   "name": "vortex-client-launcher",
-  "version": "0.9.27",
+  "version": "0.9.28",
   "description": "Vortex Client Launcher with isolated Fabric instances and a cosmetics workshop",
   "main": "src/main.js",
   "author": "Vortex Client",
