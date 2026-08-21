@@ -48,7 +48,7 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.30',
+    version: '0.9.31',
     title: 'Cape rendering and live update repair',
     summary: 'New reference-style capes and shared UUID-based Vortex player cape presence are now bundled.',
     items: [
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.30 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.31 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -901,6 +901,16 @@ function cosmeticFiles(version) {
 function loadCosmeticProfile(version) {
   return loadJson(profileFile(version), { hat: loadState().hat, emblem: loadState().emblem, baseSkin: null, generatedSkin: null, updatedAt: null });
 }
+function removeLegacyCosmeticOverlays(version) {
+  const dir = skinsRoot(version);
+  if (!exists(dir)) return 0;
+  let removed = 0;
+  for (const name of cosmeticFiles(version)) {
+    try { fs.rmSync(path.join(dir, name), { force: true }); removed += 1; } catch (_) {}
+  }
+  try { if (exists(profileFile(version))) fs.rmSync(profileFile(version), { force: true }); } catch (_) {}
+  return removed;
+}
 
 function hasFabricProfile(version) {
   const versionsDir = path.join(instanceRoot(version), 'versions');
@@ -913,13 +923,14 @@ function maintainBundledMods(version) {
   const mods = modsRoot(normalized);
   ensureDir(mods);
   const replaced = cleanReplacedVortexJars(normalized, mods);
+  const removedSkinOverlays = removeLegacyCosmeticOverlays(normalized);
   applyWebsiteCapeChoice(normalized);
   let installed = 0;
   const bundleDir = path.join(assetsRoot(), 'modpacks', normalized);
   for (const name of bundledModFiles(normalized)) {
     if (copyIfChanged(path.join(bundleDir, name), path.join(mods, name))) installed += 1;
   }
-  return { installed, replaced };
+  return { installed, replaced, removedSkinOverlays };
 }
 async function maintainInstancesSilently() {
   if (instanceMaintenanceRunning) return;
@@ -941,6 +952,7 @@ async function maintainInstancesSilently() {
         if (repair.installed) details.push(`${repair.installed} bundled mod(s) repaired`);
         if (fabricInstalled) details.push('Fabric profile restored');
         if (repair.replaced) details.push('modified Vortex files replaced');
+        if (repair.removedSkinOverlays) details.push(`${repair.removedSkinOverlays} old skin overlay(s) removed`);
         send('status', { type: 'success', message: `Instance maintenance ${version}: ${details.join(', ')}.` });
       }
     }
@@ -1263,13 +1275,9 @@ ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
     writeJson(websiteCapeChoiceFile(), choice);
     for (const version of SUPPORTED_VERSIONS) applyWebsiteCapeChoice(version);
   }
-  const previousProfile = loadCosmeticProfile(COSMETICS_MOD_VERSION);
-  let profile = null;
-  if (previousProfile?.baseSkin && /^[a-z0-9][a-z0-9._-]*\.png$/i.test(previousProfile.baseSkin)) {
-    const baseSkin = path.join(skinsRoot(COSMETICS_MOD_VERSION), previousProfile.baseSkin);
-    if (exists(baseSkin)) profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, baseSkin, saved.hat, saved.emblem);
-  }
-  return { ok: true, hat: saved.hat, emblem: saved.emblem, profile };
+  // Cape-Auswahl bleibt eine echte Cape-Auswahl. Keine Skin-Variante mehr erzeugen:
+  // Das alte Skin-Overlay war die blockartige Fläche auf Brust und Armen.
+  return { ok: true, hat: saved.hat, emblem: saved.emblem, profile: null, capeOnly: true };
 });
 ipcMain.handle('get-cosmetic-skin-preview', (_event, version = COSMETICS_MOD_VERSION) => cosmeticSkinPreview(version));
 ipcMain.handle('import-cosmetic-skin', async (_event, version, cosmetics = {}) => {
@@ -1299,7 +1307,7 @@ ipcMain.handle('import-cosmetic-skin-by-username', async (_event, version, usern
     return { ok: true, profile, username: imported.username, summary: getInstanceSummary(normalized) };
   } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; }
 });
-ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vortex Cosmetics in the Launcher', buttons: ['Got it'], message: 'The launcher creates actual skin variants for the built-in Vortex Cosmetics mod.', detail: 'Select a hat and back emblem in the launcher, then import your own 64×64 Minecraft skin. The generated PNG file is placed directly into the skins folder of the separate 1.21.11 Vortex instance. In the game, open Right Shift → Skins → Scan and click the variant. To make the skin visible to others, optionally set "Visible to everyone" in-game. Official Minecraft capes are not spoofed.' }));
+ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vortex Cosmetics in the Launcher', buttons: ['Got it'], message: 'Vortex Capes are rendered as real capes behind the player.', detail: 'Select a cape in the launcher. The selected cape is written to the Vortex cosmetics profile and rendered on the player’s back. The launcher no longer creates a chest or body skin overlay. Vortex players can see each other’s selected capes when using the updated client and addon.' }));
 
 ipcMain.handle('login', async () => {
   try {
