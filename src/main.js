@@ -48,7 +48,7 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.22',
+    version: '0.9.23',
     title: 'Cape rendering and live update repair',
     summary: 'Active Vortex capes now explicitly replace the visible Minecraft account cape, and new GitHub releases are checked while the launcher remains open.',
     items: [
@@ -317,9 +317,9 @@ function markReleaseNewsSeen() { writeJson(newsFile, { schemaVersion: 1, lastSee
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choice.json'); }
-function websiteCapeConfigPath(version) { return path.join(vortexConfigRoot(version), 'cosmetics.json'); }
+function websiteCapeConfigPath(version) { return path.join(instanceRoot(version), 'config', 'vortex-client', 'cosmetics.json'); }
 function bundledCapeAsset(capeId) { return BUNDLED_TEXTURED_CAPES.has(capeId) ? path.join(assetsRoot(), 'cosmetics', 'capes', `${capeId}.png`) : null; }
-function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(vortexConfigRoot(version), 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
+function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
 function isCapeId(value) { return /^[a-z0-9_-]{1,48}$/i.test(String(value || '')); }
 function normalizeWebsiteCapeEntitlements(data) {
   const seen = new Set();
@@ -351,7 +351,7 @@ function installWebsiteCape(capeId, bytes) {
   let written = 0;
   const choice = { cape: capeId, updatedAt: new Date().toISOString(), source: 'website-account' };
   for (const version of SUPPORTED_VERSIONS) {
-    const target = path.join(vortexConfigRoot(version), 'capes', `${capeId}.png`);
+    const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`);
     ensureDir(path.dirname(target));
     fs.writeFileSync(target, bytes);
     writeJson(websiteCapeConfigPath(version), choice);
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.22 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.23 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
