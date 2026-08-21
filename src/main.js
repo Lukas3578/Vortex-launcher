@@ -48,9 +48,9 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.25',
+    version: '0.9.27',
     title: 'Cape rendering and live update repair',
-    summary: 'Active Vortex capes now explicitly replace the visible Minecraft account cape, and new GitHub releases are checked while the launcher remains open.',
+    summary: 'The fixed 1.21.11 cape fallback is bundled and automatically replaces the old flat renderer while the launcher verifies the active cape mod.',
     items: [
       'Added a render-state cape visibility guard: an active Vortex cape disables only the local official Minecraft cape before the vanilla cape renderer runs.',
       'Strengthened local-player matching for Vortex cosmetics and kept the direct custom cape renderer active independently of the vanilla cape flag.',
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.25 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.27 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -890,7 +890,7 @@ function bundledModFiles(version) {
   const dir = path.join(assetsRoot(), 'modpacks', version);
   return exists(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.jar')) : [];
 }
-function isProtectedCosmeticsMod(name) { return /^vortexclient.*\.jar$/i.test(name); }
+function isProtectedCosmeticsMod(name) { return /^(?:vortexclient|vortex[-_]plus[-_]addon).*\.jar$/i.test(name); }
 function mandatoryModNames(version) { return new Set(bundledModFiles(version)); }
 function protectedModNames(version) { return new Set(bundledModFiles(version).filter(isProtectedCosmeticsMod)); }
 function cosmeticFiles(version) {
@@ -999,7 +999,7 @@ function cleanReplacedVortexJars(version, modsDir) {
   let removed = 0;
   for (const name of fs.readdirSync(modsDir)) {
     const baseName = name.replace(/\.disabled$/i, '');
-    if (/^vortexclient.*\.jar$/i.test(name) && (!allowed.has(baseName) || name.endsWith('.disabled'))) {
+    if (/^(?:vortexclient|vortex[-_]plus[-_]addon).*\.jar$/i.test(name) && (!allowed.has(baseName) || name.endsWith('.disabled'))) {
       fs.rmSync(path.join(modsDir, name), { force: true });
       removed += 1;
     }
