@@ -48,7 +48,7 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.23',
+    version: '0.9.24',
     title: 'Cape rendering and live update repair',
     summary: 'Active Vortex capes now explicitly replace the visible Minecraft account cape, and new GitHub releases are checked while the launcher remains open.',
     items: [
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.23 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.24 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -998,7 +998,8 @@ function cleanReplacedVortexJars(version, modsDir) {
   if (!exists(modsDir)) return 0;
   let removed = 0;
   for (const name of fs.readdirSync(modsDir)) {
-    if (/^vortexclient.*\.jar$/i.test(name) && !allowed.has(name)) {
+    const baseName = name.replace(/\.disabled$/i, '');
+    if (/^vortexclient.*\.jar$/i.test(name) && (!allowed.has(baseName) || name.endsWith('.disabled'))) {
       fs.rmSync(path.join(modsDir, name), { force: true });
       removed += 1;
     }
@@ -1021,7 +1022,20 @@ async function ensureInstance(version) {
     throw new Error(`Vortex core installation failed for Minecraft ${normalized}. Missing: ${missingFiles.join(', ')}`);
   }
   if (installed) send('log', `Installed ${installed} bundled Vortex mod file(s) into ${mods}.`);
-  if (replaced) send('log', `Replaced outdated Vortex core mod files in ${normalized}.`);
+  if (replaced) send('log', `Replaced outdated or disabled Vortex core mod files in ${normalized}.`);
+  if (normalized === COSMETICS_MOD_VERSION) {
+    const capeChoice = loadJson(websiteCapeConfigPath(normalized), { cape: null });
+    const capeId = capeChoice && typeof capeChoice.cape === 'string' ? capeChoice.cape : null;
+    if (capeId) {
+      const capeFile = path.join(instanceRoot(normalized), 'config', 'vortex-client', 'capes', `${safeFileName(capeId)}.png`);
+      if (!exists(capeFile)) {
+        if (!installBundledCape(normalized, capeId)) throw new Error(`Selected Vortex cape '${capeId}' is missing from the 1.21.11 instance.`);
+      }
+      send('log', `Cape verified: ${capeId}; vanilla cape suppression is enabled by the Cosmetics core.`);
+    } else {
+      send('log', 'No Vortex cape selected; the normal Minecraft cape remains unchanged.');
+    }
+  }
   const cosmeticState = loadState();
   const protectedCosmetics = [...protectedModNames(normalized)];
   if (protectedCosmetics.length) send('log', `Vortex Cosmetics core protected: ${protectedCosmetics.join(', ')}`);
