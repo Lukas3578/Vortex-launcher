@@ -317,9 +317,9 @@ function markReleaseNewsSeen() { writeJson(newsFile, { schemaVersion: 1, lastSee
 function hashFile(file) { return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'); }
 function safeFileName(value) { return String(value || 'skin').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/(^-|-$)/g, '') || 'skin'; }
 function websiteCapeChoiceFile() { return path.join(dataRoot, 'website-cape-choice.json'); }
-function websiteCapeConfigPath(version) { return path.join(instanceRoot(version), 'config', 'vortex-client', 'cosmetics.json'); }
+function websiteCapeConfigPath(version) { return path.join(vortexConfigRoot(version), 'cosmetics.json'); }
 function bundledCapeAsset(capeId) { return BUNDLED_TEXTURED_CAPES.has(capeId) ? path.join(assetsRoot(), 'cosmetics', 'capes', `${capeId}.png`) : null; }
-function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
+function installBundledCape(version, capeId) { const source = bundledCapeAsset(capeId); if (!source || !exists(source)) return false; const target = path.join(vortexConfigRoot(version), 'capes', `${capeId}.png`); ensureDir(path.dirname(target)); fs.copyFileSync(source, target); return true; }
 function isCapeId(value) { return /^[a-z0-9_-]{1,48}$/i.test(String(value || '')); }
 function normalizeWebsiteCapeEntitlements(data) {
   const seen = new Set();
@@ -351,7 +351,7 @@ function installWebsiteCape(capeId, bytes) {
   let written = 0;
   const choice = { cape: capeId, updatedAt: new Date().toISOString(), source: 'website-account' };
   for (const version of SUPPORTED_VERSIONS) {
-    const target = path.join(instanceRoot(version), 'config', 'vortex-client', 'capes', `${capeId}.png`);
+    const target = path.join(vortexConfigRoot(version), 'capes', `${capeId}.png`);
     ensureDir(path.dirname(target));
     fs.writeFileSync(target, bytes);
     writeJson(websiteCapeConfigPath(version), choice);
@@ -1015,6 +1015,12 @@ async function ensureInstance(version) {
   ensureDir(vortexConfigRoot(normalized));
   send('status', { type: 'info', message: `Checking Vortex instance ${normalized}…` });
   const { installed, replaced } = maintainBundledMods(normalized);
+  const requiredFiles = bundledModFiles(normalized);
+  const missingFiles = requiredFiles.filter(name => !exists(path.join(mods, name)));
+  if (missingFiles.length) {
+    throw new Error(`Vortex core installation failed for Minecraft ${normalized}. Missing: ${missingFiles.join(', ')}`);
+  }
+  if (installed) send('log', `Installed ${installed} bundled Vortex mod file(s) into ${mods}.`);
   if (replaced) send('log', `Replaced outdated Vortex core mod files in ${normalized}.`);
   const cosmeticState = loadState();
   const protectedCosmetics = [...protectedModNames(normalized)];
