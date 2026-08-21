@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.36',
-    title: 'Full cape UV coverage repair',
-    summary: 'All 64×64 texture atlas pixels used by the real cape cuboid are now filled with the Astral Vortex pattern, so the reverse and edge faces can no longer render black.',
+    version: '0.9.37',
+    title: 'Purple Nebula and Black Void capes',
+    summary: 'Nebula is now a fully purple star-nebula cape, while Void is a separate fully black obsidian-rune cape; both retain complete UV coverage.',
     items: [
-      'Filled all 4,096 pixels of each 64×64 Cape atlas with opaque, non-black Astral Vortex pattern data.',
-      'Applied the full pattern to front, back, both side strips, top, bottom and every other UV rectangle used by the Minecraft cape cuboid.',
-      'Mirrored the primary motif onto the conventional front and back cape faces for a coherent moving in-game result.',
-      'Bundled the fully covered atlases directly inside the fixed Vortex Plus renderer mod.'
+      'Redesigned Nebula as a fully purple-violet cape with a bright central star spiral and violet pixel constellations.',
+      'Redesigned Void as a deep-black obsidian and charcoal cape with a restrained silver void rune.',
+      'Kept all 4,096 atlas pixels opaque so both designs cover front, back, sides and edges during Minecraft cape movement.',
+      'Bundled the distinct Nebula and Void atlases directly inside the fixed Vortex Plus renderer mod.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.36 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.37 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
