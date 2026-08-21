@@ -28,7 +28,7 @@ jobs:
       - name: GitHub Release vorbereiten
         shell: bash
         run: |
-          cat > release-notes.md <<'EOF'
+          cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
           ### Neu
