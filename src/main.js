@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.41',
-    title: 'Launch active account directly',
-    summary: 'Choose an account in the top-right account menu and use the same Launch Vortex button; a second selected account starts automatically in its own instance.',
+    version: '0.9.42',
+    title: 'Clean 3D hat renderer',
+    summary: 'The detached white/translucent hat overlay has been removed and every Vortex hat now uses a clean, head-attached 3D model with improved pixel textures.',
     items: [
-      'Removes the separate account dropdown and the Launch Second Account button from the start page.',
-      'Uses the Minecraft account selected in the top-right account menu for every Launch Vortex click.',
-      'Automatically creates a separate game directory when another selected account is already running.',
-      'Prevents the same active account from being launched twice while its Minecraft client is open.'
+      'Cancels the legacy Cosmetics Core hat draw pass responsible for the detached translucent overlay block.',
+      'Adds clean head-attached 3D geometry for Vortex Cap, Neon Halo, Void Crown, Cyber Headphones and Slime Antenna.',
+      'Uses new opaque 64×64 Minecraft pixel textures with intentional highlights, shadows and no white residue.',
+      'Keeps each selected hat aligned to the player head in-world and in inventory previews.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.41 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.42 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
