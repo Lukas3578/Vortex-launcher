@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.49',
+    title: 'Addon Build Stability Fix',
+    summary: 'The fixed Cape and Hat renderer addon now builds successfully both locally and on GitHub Actions without depending on an optional internal cosmetics class.',
+    items: [
+      'Removes the missing WearableCosmetics dependency that caused compile failures in the Addon GitHub Actions workflow.',
+      'Adds a small addon-owned local cosmetic selection reader for the current player and selected 3D hat.',
+      'Keeps the embedded cape renderer, premium 3D hats and all existing cosmetic choices intact.',
+      'Bundles the verified addon JAR produced by the successful CI-compatible build into the launcher.'
+    ]
+  },
+  {
     version: '0.9.48',
     title: 'Minimal Skin Studio Composition',
     summary: 'The Skin Studio was refined again into a single connected, restrained Minecraft editor: fewer containers, a compact application header and a clearer work-first layout.',
@@ -432,7 +443,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.48 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.49 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
