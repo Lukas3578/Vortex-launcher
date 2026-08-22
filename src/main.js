@@ -48,6 +48,19 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.44',
+    title: 'Premium 3D headwear collection',
+    summary: 'Every Vortex hat was rebuilt as a detailed Minecraft 3D cosmetic with richer geometry, handcrafted opaque pixel textures and new premium launcher previews.',
+    items: [
+      'Vortex Cap: tiered cyber crown, wide reactor visor, side clasps, rear strap and an illuminated Vortex core.',
+      'Neon Halo: segmented floating circlet with a front energy reactor and individually modeled side nodes.',
+      'Void Crown: five obsidian spires, metal brackets and a luminous amethyst centerpiece.',
+      'Cyber Headphones: layered headband, separate yokes, two deep earcups, illuminated sound cores and a boom mic.',
+      'Slime Antenna: slime-tech cap, twin sockets, multi-section antennae and bright crystal tips.',
+      'All five texture atlases are fully opaque 64×64 pixel art; no white or transparent atlas fragments are used.'
+    ]
+  },
+  {
     version: '0.9.43',
     title: 'Original Minecraft skin restored',
     summary: 'The legacy Cosmetics skin override has been disabled. Hats and capes now stay as separate 3D cosmetics while your signed-in Minecraft skin remains original.',
@@ -369,7 +382,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.43 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.44 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
