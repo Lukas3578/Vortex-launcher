@@ -48,6 +48,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.50',
+    title: 'Original Minecraft Skin Hard Fix',
+    summary: 'Cosmetics can no longer access, discover or replace a local player skin. Launcher-only previews and the Minecraft account skin are now fully separated.',
+    items: [
+      'Removes SkinOverrideMixin bytecode and its registration from the bundled Cosmetics Core JAR.',
+      'Moves all Skin Studio, import and Community previews into a launcher-only config folder outside the Cosmetics Core path.',
+      'Deletes every legacy PNG skin in the Core-owned skins folder and clears all known old skin-path settings on every instance repair.',
+      'Updates parallel instances from the repaired base instance so no old Core JAR or legacy skin profile can survive a second-account launch.',
+      'Keeps hats, capes and local launcher previews while the signed-in Microsoft/Minecraft skin stays authoritative in game.'
+    ]
+  },
+  {
     version: '0.9.49',
     title: 'Addon Build Stability Fix',
     summary: 'The fixed Cape and Hat renderer addon now builds successfully both locally and on GitHub Actions without depending on an optional internal cosmetics class.',
@@ -367,6 +379,10 @@ function modsRoot(version) { return path.join(instanceRoot(version), 'mods'); }
 function resourcePacksRoot(version) { return path.join(instanceRoot(version), 'resourcepacks'); }
 function vortexConfigRoot(version) { return path.join(instanceRoot(version), 'config', 'vortexclient'); }
 function skinsRoot(version) { return path.join(vortexConfigRoot(version), 'skins'); }
+// Studio and imported skins are launcher-only previews. They must never be stored where
+// the Cosmetics Core can discover and apply a local skin replacement.
+function previewSkinsRoot(version) { return path.join(instanceRoot(version), 'config', 'vortexlauncher', 'skin-previews'); }
+function previewProfileFile(version) { return path.join(instanceRoot(version), 'config', 'vortexlauncher', 'skin-preview.json'); }
 function profileFile(version) { return path.join(vortexConfigRoot(version), 'launcher-cosmetics.json'); }
 function sanitizeVersion(version) { return SUPPORTED_VERSIONS.includes(version) ? version : null; }
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
@@ -443,7 +459,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.49 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.50 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -742,22 +758,17 @@ function saveStudioSkinPreview(version, dataUri, sourceName = 'skin-studio') {
   const { buffer, dataUri: normalizedData } = normalizeStudioSkinData(dataUri);
   const name = safeFileName(String(sourceName || 'skin-studio')).slice(0, 60) || 'skin-studio';
   const previewName = `vortex-preview-${name}.png`;
-  ensureDir(skinsRoot(version));
-  fs.writeFileSync(path.join(skinsRoot(version), previewName), buffer);
-  const previous = loadCosmeticProfile(version);
+  ensureDir(previewSkinsRoot(version));
+  fs.writeFileSync(path.join(previewSkinsRoot(version), previewName), buffer);
   const profile = {
-    ...previous,
-    baseSkin: null,
-    generatedSkin: null,
     previewSkin: previewName,
-    skinOverrideDisabled: true,
-    hat: HATS.includes(previous.hat) ? previous.hat : loadState().hat,
-    emblem: EMBLEMS.includes(previous.emblem) ? previous.emblem : loadState().emblem,
     createdAt: new Date().toISOString(),
     source: 'launcher-skin-studio-preview-only',
     launcher: `Vortex Client Launcher ${app.getVersion()}`
   };
-  writeJson(profileFile(version), profile);
+  writeJson(previewProfileFile(version), profile);
+  // Keep the Core-facing profile explicitly skin-free even if an old profile existed.
+  removeLegacyCosmeticOverlays(version);
   return { ok: true, profile, preview: normalizedData };
 }
 function validCommunitySkinCode(value) { return /^[a-f0-9]{8,32}$/i.test(String(value || '')); }
@@ -1065,7 +1076,9 @@ function protectedModNames(version) { return new Set(bundledModFiles(version).fi
 function cosmeticFiles(version) {
   const dir = skinsRoot(version);
   if (!exists(dir)) return [];
-  return fs.readdirSync(dir).filter(name => /^vortex-(base|cosmetic)-.*\.png$/i.test(name));
+  // Every PNG in this Core-owned directory is a legacy override candidate. Launcher-only
+  // previews are now stored under config/vortexlauncher and never in this directory.
+  return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.png'));
 }
 function loadCosmeticProfile(version) {
   return loadJson(profileFile(version), { hat: loadState().hat, emblem: loadState().emblem, baseSkin: null, generatedSkin: null, updatedAt: null });
@@ -1078,11 +1091,18 @@ function applyHatChoice(version, hat) {
   const previous = loadJson(profileFile(normalized), {});
   // Hats and capes are rendered as 3D cosmetics. Never activate a generated skin here:
   // the signed-in Minecraft account must keep its original Mojang/Microsoft skin.
+  const { baseSkin, generatedSkin, previewSkin, skin, skinPath, activeSkin, selectedSkin, customSkin, ...cosmeticOnly } = previous;
   writeJson(profileFile(normalized), {
-    ...previous,
+    ...cosmeticOnly,
     hat,
     baseSkin: null,
     generatedSkin: null,
+    previewSkin: null,
+    skin: null,
+    skinPath: null,
+    activeSkin: null,
+    selectedSkin: null,
+    customSkin: null,
     skinOverrideDisabled: true,
     updatedAt: new Date().toISOString(),
     source: 'launcher-3d-cosmetics-no-skin-override',
@@ -1103,13 +1123,22 @@ function removeLegacyCosmeticOverlays(version) {
   // Clear any profile values that the legacy SkinOverrideMixin may use. The file still
   // remains authoritative for the selected real 3D hat and cape, never for player skin data.
   const previous = loadJson(profileFile(version), {});
+  // Strip, rather than preserve, every known skin path/selection key from old Core builds.
+  // The Core profile may only contain settings for real 3D cosmetics.
+  const { baseSkin, generatedSkin, previewSkin, skin, skinPath, activeSkin, selectedSkin, customSkin, ...cosmeticOnly } = previous;
   writeJson(profileFile(version), {
-    ...previous,
+    ...cosmeticOnly,
     baseSkin: null,
     generatedSkin: null,
+    previewSkin: null,
+    skin: null,
+    skinPath: null,
+    activeSkin: null,
+    selectedSkin: null,
+    customSkin: null,
     skinOverrideDisabled: true,
     cleanedAt: new Date().toISOString(),
-    source: 'launcher-legacy-skin-override-cleanup',
+    source: 'launcher-hard-skin-override-cleanup',
     launcher: `Vortex Client Launcher ${app.getVersion()}`
   });
   return removed;
@@ -1396,16 +1425,16 @@ async function fetchMinecraftSkinByUsername(username) {
   if (!buffer.length || buffer.length > 2 * 1024 * 1024) throw new Error('The skin file is invalid or too large.');
   const skin = PNG.sync.read(buffer);
   if (skin.width !== 64 || skin.height !== 64) throw new Error('The found skin does not have a valid 64×64 format.');
-  const temporaryFile = path.join(skinsRoot(COSMETICS_MOD_VERSION), `import-${safeFileName(profile.name || normalized)}.png`);
-  ensureDir(skinsRoot(COSMETICS_MOD_VERSION));
+  const temporaryFile = path.join(previewSkinsRoot(COSMETICS_MOD_VERSION), `import-${safeFileName(profile.name || normalized)}.png`);
+  ensureDir(previewSkinsRoot(COSMETICS_MOD_VERSION));
   fs.writeFileSync(temporaryFile, buffer);
   return { file: temporaryFile, username: profile.name || normalized };
 }
 function cosmeticSkinPreview(version = COSMETICS_MOD_VERSION) {
-  const profile = loadCosmeticProfile(version);
+  const profile = loadJson(previewProfileFile(version), {});
   const fileName = profile.previewSkin || null;
   if (!fileName || !/^[a-z0-9][a-z0-9._-]*\.png$/i.test(fileName)) return { ok: true, preview: null, fileName: null };
-  const file = path.join(skinsRoot(version), fileName);
+  const file = path.join(previewSkinsRoot(version), fileName);
   if (!exists(file)) return { ok: true, preview: null, fileName: null };
   const data = fs.readFileSync(file).toString('base64');
   return { ok: true, preview: `data:image/png;base64,${data}`, fileName };
@@ -1417,23 +1446,20 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   // A local import is preview-only. Do not draw hats/capes into the skin PNG and do not
   // populate baseSkin/generatedSkin: the Minecraft account's original skin must remain active.
   const baseName = safeFileName(path.basename(sourceFile, path.extname(sourceFile)));
-  ensureDir(skinsRoot(version));
+  ensureDir(previewSkinsRoot(version));
   const previewName = `vortex-preview-${baseName}.png`;
-  const target = path.join(skinsRoot(version), previewName);
+  const target = path.join(previewSkinsRoot(version), previewName);
   fs.copyFileSync(sourceFile, target);
-  const previous = loadCosmeticProfile(version);
   const profile = {
-    ...previous,
-    baseSkin: null,
-    generatedSkin: null,
     previewSkin: previewName,
-    skinOverrideDisabled: true,
     hat,
     emblem,
     createdAt: new Date().toISOString(),
     launcher: `Vortex Client Launcher ${app.getVersion()}`
   };
-  writeJson(profileFile(version), profile);
+  writeJson(previewProfileFile(version), profile);
+  // Do not write a skin path into launcher-cosmetics.json under any circumstance.
+  removeLegacyCosmeticOverlays(version);
   return profile;
 }
 
@@ -1523,7 +1549,7 @@ ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = san
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
 ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
-ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics skins are only available for 1.21.11.' }; ensureDir(skinsRoot(version)); return shell.openPath(skinsRoot(version)); });
+ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics skins are only available for 1.21.11.' }; ensureDir(previewSkinsRoot(version)); return shell.openPath(previewSkinsRoot(version)); });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
 ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
 ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
