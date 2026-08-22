@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.37',
-    title: 'Purple Nebula and Black Void capes',
-    summary: 'Nebula is now a fully purple star-nebula cape, while Void is a separate fully black obsidian-rune cape; both retain complete UV coverage.',
+    version: '0.9.38',
+    title: 'Real 3D hat selection repair',
+    summary: 'Every hat selection is now written into the Minecraft Cosmetics Core profile, so Cap, Halo, Crown, Headphones and Antennae each render as their own real 3D form instead of always showing a ring.',
     items: [
-      'Redesigned Nebula as a fully purple-violet cape with a bright central star spiral and violet pixel constellations.',
-      'Redesigned Void as a deep-black obsidian and charcoal cape with a restrained silver void rune.',
-      'Kept all 4,096 atlas pixels opaque so both designs cover front, back, sides and edges during Minecraft cape movement.',
-      'Bundled the distinct Nebula and Void atlases directly inside the fixed Vortex Plus renderer mod.'
+      'Writes the selected hat directly into the Cosmetics Core configuration for every Vortex Minecraft instance.',
+      'Preserves the 3D hat configuration during instance maintenance instead of deleting it with retired skin-overlay files.',
+      'Uses the Core’s distinct real 3D geometries: Vortex Cap, Neon Halo, Void Crown, Cyber Headphones and Slime Antennae.',
+      'Updates the launcher cards so each choice clearly states its actual 3D shape.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.37 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.38 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -901,6 +901,23 @@ function cosmeticFiles(version) {
 function loadCosmeticProfile(version) {
   return loadJson(profileFile(version), { hat: loadState().hat, emblem: loadState().emblem, baseSkin: null, generatedSkin: null, updatedAt: null });
 }
+// The Cosmetics Core reads this file directly every two seconds. Keep the selected
+// 3D hat here independently of the optional generated skin workflow.
+function applyHatChoice(version, hat) {
+  const normalized = sanitizeVersion(version);
+  if (!normalized || !HATS.includes(hat)) return;
+  const previous = loadJson(profileFile(normalized), {});
+  writeJson(profileFile(normalized), {
+    ...previous,
+    hat,
+    updatedAt: new Date().toISOString(),
+    source: 'launcher-3d-hat-selection',
+    launcher: `Vortex Client Launcher ${app.getVersion()}`
+  });
+}
+function applyHatChoiceToAllInstances(hat) {
+  for (const version of SUPPORTED_VERSIONS) applyHatChoice(version, hat);
+}
 function removeLegacyCosmeticOverlays(version) {
   const dir = skinsRoot(version);
   if (!exists(dir)) return 0;
@@ -908,7 +925,8 @@ function removeLegacyCosmeticOverlays(version) {
   for (const name of cosmeticFiles(version)) {
     try { fs.rmSync(path.join(dir, name), { force: true }); removed += 1; } catch (_) {}
   }
-  try { if (exists(profileFile(version))) fs.rmSync(profileFile(version), { force: true }); } catch (_) {}
+  // Do not remove launcher-cosmetics.json here. It is now the authoritative
+  // selection file for the real 3D headwear renderer.
   return removed;
 }
 
@@ -925,6 +943,7 @@ function maintainBundledMods(version) {
   const replaced = cleanReplacedVortexJars(normalized, mods);
   const removedSkinOverlays = removeLegacyCosmeticOverlays(normalized);
   applyWebsiteCapeChoice(normalized);
+  applyHatChoice(normalized, loadState().hat);
   let installed = 0;
   const bundleDir = path.join(assetsRoot(), 'modpacks', normalized);
   for (const name of bundledModFiles(normalized)) {
@@ -1270,6 +1289,7 @@ ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   const emblem = cosmetics.emblem ?? state.emblem;
   if (!HATS.includes(hat) || !EMBLEMS.includes(emblem)) return { ok: false, error: 'Unknown cosmetic.' };
   const saved = saveState({ hat, emblem });
+  if (Object.prototype.hasOwnProperty.call(cosmetics, 'hat')) applyHatChoiceToAllInstances(saved.hat);
   if (Object.prototype.hasOwnProperty.call(cosmetics, 'emblem')) {
     const choice = { cape: saved.emblem === 'none' ? null : saved.emblem, updatedAt: new Date().toISOString(), source: 'bodyfit-cosmetic' };
     writeJson(websiteCapeChoiceFile(), choice);
