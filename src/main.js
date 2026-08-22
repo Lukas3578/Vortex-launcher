@@ -48,6 +48,16 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.51',
+    title: 'Skin Studio Heading Cleanup',
+    summary: 'The requested Skin Studio heading was removed, leaving a cleaner compact editor header without changing any tool or skin workflow.',
+    items: [
+      'Removes the exact heading “Paint your Minecraft character.” from the Skin Studio.',
+      'Keeps the compact Vortex Skin Studio label, 64×64 hint, helper text and every existing editor function.',
+      'Adds a complete project handover prompt documenting the technical, cosmetic, UI, build and original-skin protections completed in this session.'
+    ]
+  },
+  {
     version: '0.9.50',
     title: 'Original Minecraft Skin Hard Fix',
     summary: 'Cosmetics can no longer access, discover or replace a local player skin. Launcher-only previews and the Minecraft account skin are now fully separated.',
@@ -459,7 +469,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.50 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.51 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
