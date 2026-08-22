@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.42',
-    title: 'Clean 3D hat renderer',
-    summary: 'The detached white/translucent hat overlay has been removed and every Vortex hat now uses a clean, head-attached 3D model with improved pixel textures.',
+    version: '0.9.43',
+    title: 'Original Minecraft skin restored',
+    summary: 'The legacy Cosmetics skin override has been disabled. Hats and capes now stay as separate 3D cosmetics while your signed-in Minecraft skin remains original.',
     items: [
-      'Cancels the legacy Cosmetics Core hat draw pass responsible for the detached translucent overlay block.',
-      'Adds clean head-attached 3D geometry for Vortex Cap, Neon Halo, Void Crown, Cyber Headphones and Slime Antenna.',
-      'Uses new opaque 64×64 Minecraft pixel textures with intentional highlights, shadows and no white residue.',
-      'Keeps each selected hat aligned to the player head in-world and in inventory previews.'
+      'Disables the legacy Cosmetics Core SkinOverrideMixin in the bundled Minecraft mod.',
+      'Clears old baseSkin and generatedSkin profile entries at instance maintenance and before launch.',
+      'Keeps imported 64×64 skin files as local launcher previews only; they are never applied to the signed-in Minecraft account.',
+      'Retains hats and capes as separate 3D cosmetics without recoloring the player body.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.42 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.43 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -914,11 +914,16 @@ function applyHatChoice(version, hat) {
   const normalized = sanitizeVersion(version);
   if (!normalized || !HATS.includes(hat)) return;
   const previous = loadJson(profileFile(normalized), {});
+  // Hats and capes are rendered as 3D cosmetics. Never activate a generated skin here:
+  // the signed-in Minecraft account must keep its original Mojang/Microsoft skin.
   writeJson(profileFile(normalized), {
     ...previous,
     hat,
+    baseSkin: null,
+    generatedSkin: null,
+    skinOverrideDisabled: true,
     updatedAt: new Date().toISOString(),
-    source: 'launcher-3d-hat-selection',
+    source: 'launcher-3d-cosmetics-no-skin-override',
     launcher: `Vortex Client Launcher ${app.getVersion()}`
   });
 }
@@ -927,13 +932,24 @@ function applyHatChoiceToAllInstances(hat) {
 }
 function removeLegacyCosmeticOverlays(version) {
   const dir = skinsRoot(version);
-  if (!exists(dir)) return 0;
   let removed = 0;
-  for (const name of cosmeticFiles(version)) {
-    try { fs.rmSync(path.join(dir, name), { force: true }); removed += 1; } catch (_) {}
+  if (exists(dir)) {
+    for (const name of cosmeticFiles(version)) {
+      try { fs.rmSync(path.join(dir, name), { force: true }); removed += 1; } catch (_) {}
+    }
   }
-  // Do not remove launcher-cosmetics.json here. It is now the authoritative
-  // selection file for the real 3D headwear renderer.
+  // Clear any profile values that the legacy SkinOverrideMixin may use. The file still
+  // remains authoritative for the selected real 3D hat and cape, never for player skin data.
+  const previous = loadJson(profileFile(version), {});
+  writeJson(profileFile(version), {
+    ...previous,
+    baseSkin: null,
+    generatedSkin: null,
+    skinOverrideDisabled: true,
+    cleanedAt: new Date().toISOString(),
+    source: 'launcher-legacy-skin-override-cleanup',
+    launcher: `Vortex Client Launcher ${app.getVersion()}`
+  });
   return removed;
 }
 
@@ -1225,7 +1241,7 @@ async function fetchMinecraftSkinByUsername(username) {
 }
 function cosmeticSkinPreview(version = COSMETICS_MOD_VERSION) {
   const profile = loadCosmeticProfile(version);
-  const fileName = profile.generatedSkin || profile.baseSkin;
+  const fileName = profile.previewSkin || null;
   if (!fileName || !/^[a-z0-9][a-z0-9._-]*\.png$/i.test(fileName)) return { ok: true, preview: null, fileName: null };
   const file = path.join(skinsRoot(version), fileName);
   if (!exists(file)) return { ok: true, preview: null, fileName: null };
@@ -1233,20 +1249,28 @@ function cosmeticSkinPreview(version = COSMETICS_MOD_VERSION) {
   return { ok: true, preview: `data:image/png;base64,${data}`, fileName };
 }
 function makeCosmeticSkin(version, sourceFile, hat, emblem) {
-  if (version !== COSMETICS_MOD_VERSION) throw new Error('The built-in Vortex Cosmetics output currently supports Minecraft 1.21.11.');
+  if (version !== COSMETICS_MOD_VERSION) throw new Error('The built-in Vortex Cosmetics preview currently supports Minecraft 1.21.11.');
   const source = PNG.sync.read(fs.readFileSync(sourceFile));
   if (source.width !== 64 || source.height !== 64) throw new Error('Please choose a valid Minecraft skin in 64×64 pixel format.');
-  // Since version 2.29.0, hats are rendered as real 3D geometry by the Cosmetics Core
-  // directly on the animated head, keeping the skin texture itself clean.
-  applyEmblem(source, emblem);
+  // A local import is preview-only. Do not draw hats/capes into the skin PNG and do not
+  // populate baseSkin/generatedSkin: the Minecraft account's original skin must remain active.
   const baseName = safeFileName(path.basename(sourceFile, path.extname(sourceFile)));
   ensureDir(skinsRoot(version));
-  const sourceTarget = path.join(skinsRoot(version), `vortex-base-${baseName}.png`);
-  if (!exists(sourceTarget)) fs.copyFileSync(sourceFile, sourceTarget);
-  const generatedName = `vortex-cosmetic-${baseName}-${hat}-${emblem}.png`;
-  const target = path.join(skinsRoot(version), generatedName);
-  fs.writeFileSync(target, PNG.sync.write(source));
-  const profile = { baseSkin: path.basename(sourceTarget), generatedSkin: generatedName, hat, emblem, createdAt: new Date().toISOString(), launcher: `Vortex Client Launcher ${app.getVersion()}` };
+  const previewName = `vortex-preview-${baseName}.png`;
+  const target = path.join(skinsRoot(version), previewName);
+  fs.copyFileSync(sourceFile, target);
+  const previous = loadCosmeticProfile(version);
+  const profile = {
+    ...previous,
+    baseSkin: null,
+    generatedSkin: null,
+    previewSkin: previewName,
+    skinOverrideDisabled: true,
+    hat,
+    emblem,
+    createdAt: new Date().toISOString(),
+    launcher: `Vortex Client Launcher ${app.getVersion()}`
+  };
   writeJson(profileFile(version), profile);
   return profile;
 }
