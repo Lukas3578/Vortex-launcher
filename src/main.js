@@ -48,6 +48,19 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.45',
+    title: 'Skin Studio and Community Skins',
+    summary: 'Create a real 64×64 Minecraft skin pixel by pixel, inspect it on a rotatable 3D character and publish the design directly to the Vortex Community.',
+    items: [
+      'Adds the Skin Studio: pixel canvas, brush sizes, colour palette, fill tool, eraser and a starter design.',
+      'Adds a live rotatable 3D Minecraft player preview that uses the same 64×64 skin texture.',
+      'Stores studio skins only as local launcher previews; the signed-in Microsoft/Minecraft skin is never changed.',
+      'Adds authenticated Community publishing for skin designs with title, description and public or unlisted visibility.',
+      'Adds a Community Skins gallery with preview, local PNG download and one-click opening in the Skin Studio.',
+      'Adds server-side PNG, size and exact 64×64 validation for every Community skin upload.'
+    ]
+  },
+  {
     version: '0.9.44',
     title: 'Premium 3D headwear collection',
     summary: 'Every Vortex hat was rebuilt as a detailed Minecraft 3D cosmetic with richer geometry, handcrafted opaque pixel textures and new premium launcher previews.',
@@ -382,7 +395,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.44 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.45 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -665,6 +678,94 @@ async function uploadCommunityPreset(metadata = {}) {
   const visibility = metadata.visibility === 'unlisted' ? 'unlisted' : 'public';
   const result = await communityFetch('/api/presets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, filename, description, visibility, content }) });
   return { ok: true, shareCode: result.shareCode || null, kind: isMacro ? 'macro' : 'preset' };
+}
+function normalizeStudioSkinData(dataUri) {
+  const value = String(dataUri || '');
+  const match = /^data:image\/png;base64,([A-Za-z0-9+/]+={0,2})$/.exec(value);
+  if (!match) throw new Error('The Skin Studio must provide a PNG image.');
+  const buffer = Buffer.from(match[1], 'base64');
+  if (!buffer.length || buffer.length > 96 * 1024) throw new Error('The 64×64 skin PNG is invalid or too large.');
+  const skin = PNG.sync.read(buffer);
+  if (skin.width !== 64 || skin.height !== 64) throw new Error('The Skin Studio image must be exactly 64×64 pixels.');
+  return { buffer, dataUri: `data:image/png;base64,${buffer.toString('base64')}` };
+}
+function saveStudioSkinPreview(version, dataUri, sourceName = 'skin-studio') {
+  if (version !== COSMETICS_MOD_VERSION) throw new Error('The Skin Studio is available for Minecraft 1.21.11.');
+  const { buffer, dataUri: normalizedData } = normalizeStudioSkinData(dataUri);
+  const name = safeFileName(String(sourceName || 'skin-studio')).slice(0, 60) || 'skin-studio';
+  const previewName = `vortex-preview-${name}.png`;
+  ensureDir(skinsRoot(version));
+  fs.writeFileSync(path.join(skinsRoot(version), previewName), buffer);
+  const previous = loadCosmeticProfile(version);
+  const profile = {
+    ...previous,
+    baseSkin: null,
+    generatedSkin: null,
+    previewSkin: previewName,
+    skinOverrideDisabled: true,
+    hat: HATS.includes(previous.hat) ? previous.hat : loadState().hat,
+    emblem: EMBLEMS.includes(previous.emblem) ? previous.emblem : loadState().emblem,
+    createdAt: new Date().toISOString(),
+    source: 'launcher-skin-studio-preview-only',
+    launcher: `Vortex Client Launcher ${app.getVersion()}`
+  };
+  writeJson(profileFile(version), profile);
+  return { ok: true, profile, preview: normalizedData };
+}
+function validCommunitySkinCode(value) { return /^[a-f0-9]{8,32}$/i.test(String(value || '')); }
+async function communitySkinBinaryFetch(shareCode) {
+  const code = String(shareCode || '');
+  if (!validCommunitySkinCode(code)) throw new Error('Invalid Community skin ID.');
+  const cookie = await communityCookieHeader();
+  const headers = { Accept: 'image/png', 'User-Agent': MODRINTH_USER_AGENT };
+  if (cookie) headers.Cookie = cookie;
+  const response = await fetch(`${COMMUNITY_BASE_URL}/api/skins/${encodeURIComponent(code)}/download`, { headers, signal: AbortSignal.timeout(30000) });
+  if (!response.ok) { const payload = await response.json().catch(() => null); throw new Error(payload?.error || `Community skin responded with ${response.status}.`); }
+  if (!(response.headers.get('content-type') || '').includes('image/png')) throw new Error('The Community did not provide a PNG skin.');
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!buffer.length || buffer.length > 96 * 1024) throw new Error('The Community skin is invalid or too large.');
+  const skin = PNG.sync.read(buffer);
+  if (skin.width !== 64 || skin.height !== 64) throw new Error('The Community skin is not a valid 64×64 Minecraft skin.');
+  return buffer;
+}
+async function listCommunitySkins() {
+  const skins = await communityFetch('/api/skins');
+  return Array.isArray(skins) ? skins.slice(0, 60).map(item => {
+    const preview = String(item.preview || '');
+    return {
+      id: Number(item.id || 0), name: String(item.name || 'Unnamed Skin').slice(0, 60),
+      description: String(item.description || '').slice(0, 500), downloads: Number(item.downloads || 0),
+      createdAt: item.createdAt || item.created_at || null, shareCode: validCommunitySkinCode(item.shareCode || item.share_code) ? String(item.shareCode || item.share_code) : '',
+      username: String(item.displayName || item.display_name || item.username || 'Community').slice(0, 60),
+      preview: /^data:image\/png;base64,[A-Za-z0-9+/=]{1,131072}$/.test(preview) ? preview : null
+    };
+  }).filter(item => item.shareCode && item.preview) : [];
+}
+async function uploadCommunitySkin(metadata = {}) {
+  const state = await getCommunityState();
+  if (!state.websiteAccount?.username) throw new Error('Please sign in to the Community before publishing a skin.');
+  const name = String(metadata.name || '').trim().slice(0, 60);
+  const description = String(metadata.description || '').trim().slice(0, 500);
+  if (!name) throw new Error('Give your Community skin a title first.');
+  const { dataUri } = normalizeStudioSkinData(metadata.skinData);
+  const visibility = metadata.visibility === 'unlisted' ? 'unlisted' : 'public';
+  const result = await communityFetch('/api/skins', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description, visibility, skinData: dataUri }) });
+  return { ok: true, shareCode: result.shareCode || null };
+}
+async function downloadCommunitySkin(shareCode) {
+  const code = String(shareCode || '');
+  const buffer = await communitySkinBinaryFetch(code);
+  ensureDir(communityDownloadsRoot());
+  const fileName = `community-skin-${code}.png`;
+  fs.writeFileSync(path.join(communityDownloadsRoot(), fileName), buffer);
+  return { ok: true, fileName, folder: communityDownloadsRoot() };
+}
+async function useCommunitySkin(shareCode, version = COSMETICS_MOD_VERSION) {
+  const code = String(shareCode || '');
+  const buffer = await communitySkinBinaryFetch(code);
+  const profile = saveStudioSkinPreview(version, `data:image/png;base64,${buffer.toString('base64')}`, `community-${code}`);
+  const skin = await communityFetch(`/api/skins/${encodeURIComponent(code)}`).catch(() => null);
+  return { ...profile, name: String(skin?.name || 'Community skin').slice(0, 60) };
 }
 function openCommunityLogin() {
   const communityWindow = new BrowserWindow({ width: 520, height: 720, title: 'Sign in to Vortex Community', parent: mainWindow, modal: true, backgroundColor: '#090d18', webPreferences: { contextIsolation: true, nodeIntegration: false } });
@@ -1354,6 +1455,11 @@ ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });
 ipcMain.handle('community-download-preset', async (_event, shareCode, filename) => { try { return await downloadCommunityPreset(shareCode, filename); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-upload-preset', async (_event, metadata) => { try { return await uploadCommunityPreset(metadata); } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('skin-studio-save', (_event, version, skinData, sourceName) => { try { return saveStudioSkinPreview(version || COSMETICS_MOD_VERSION, skinData, sourceName); } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('community-list-skins', async () => { try { return { ok: true, skins: await listCommunitySkins() }; } catch (error) { return { ok: false, skins: [], error: error.message }; } });
+ipcMain.handle('community-upload-skin', async (_event, metadata) => { try { return await uploadCommunitySkin(metadata); } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('community-download-skin', async (_event, shareCode) => { try { return await downloadCommunitySkin(shareCode); } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('community-use-skin', async (_event, shareCode, version) => { try { return await useCommunitySkin(shareCode, version || COSMETICS_MOD_VERSION); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
