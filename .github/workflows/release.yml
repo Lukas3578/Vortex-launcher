@@ -32,22 +32,21 @@ jobs:
           ## Vortex Client $GITHUB_REF_NAME
 
           ### Neu
-          - Aktueller Vortex-Launcher und Windows-Installer.
-          - Verbesserte Cosmetics- und Cape-Unterstützung für Minecraft 1.21.11.
-          - Gemeinsame Vortex-Cape-Synchronisierung für Spieler mit aktualisiertem Client.
+          - Vortex Client ohne öffentlichen Cosmetics-Bereich.
+          - Separate Sandbox Vortex App für Tests mit Cosmetics.
+          - Klare Trennung zwischen normalem Launcher und Sandbox-Experimenten.
 
           ### Behoben
-          - Veraltete Vortex-Mod-Dateien und alte Skin-Overlay-Profile werden beim Instanz-Check bereinigt.
+          - Cosmetics-Navigation und Cosmetics-Seite sind aus dem normalen Launcher entfernt.
           - Cape-Konfiguration und mitgelieferte Assets werden vor dem Start geprüft.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
           2. Die vorherige Launcher-Version schließen und den Installer ausführen.
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
-          4. Für Multiplayer-Capes müssen alle beteiligten Spieler diese Release-Version verwenden.
 
           ### Hinweis
-          Die Release-Beschreibung dokumentiert den Build-Stand. Ein echter Multiplayer-Test muss mit zwei gestarteten Vortex-Clients durchgeführt werden.
+          Cosmetics stehen ausschließlich in der eigenständigen Sandbox Vortex App zur Verfügung.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
