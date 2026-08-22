@@ -48,6 +48,18 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.48',
+    title: 'Minimal Skin Studio Composition',
+    summary: 'The Skin Studio was refined again into a single connected, restrained Minecraft editor: fewer containers, a compact application header and a clearer work-first layout.',
+    items: [
+      'Replaces the card-heavy design with one connected three-part editor workspace: Pixel Editor, 3D Preview and Properties / Export.',
+      'Uses the requested dark Vortex palette with blue and cyan only as restrained interactive accents.',
+      'Reduces the header to a compact application label and supporting text, with a subtle 64×64 indicator.',
+      'Simplifies the sidebar, removes unnecessary decorative elements and makes active navigation a subtle cyan line.',
+      'Keeps the existing drawing, preview, rotation, local save, import and Community publishing functionality unchanged.'
+    ]
+  },
+  {
     version: '0.9.47',
     title: 'Premium Skin Studio Redesign',
     summary: 'The Skin Studio was rebuilt into a denser, more professional Vortex creation workspace with premium cards, stronger hierarchy and clearer active tools.',
@@ -420,7 +432,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.47 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.48 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
