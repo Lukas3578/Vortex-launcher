@@ -24,14 +24,14 @@
       </nav>
       <section class="sidebar-card"><span class="green-dot"></span><div><strong>Vortex Core</strong><small>Automatically protected</small></div></section>
       <button class="sidebar-update" id="sidebarUpdate" hidden><span class="sidebar-update-orb">↻</span><span><strong>Client update available</strong><small id="sidebarUpdateText">New version ready</small></span><b>›</b></button>
-      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.40</span></div>
+      <div class="sidebar-footer">VORTEX CLIENT<br><span>BUILD 0.9.41</span></div>
     </aside>
 
     <main>
       <header class="topbar"><div><p class="eyebrow">VORTEX CLIENT // FABRIC EDITION</p><h1>Ready for your world.</h1></div><div class="account" id="account"></div></header>
 
       <section class="page active" id="play">
-        <div class="hero"><div class="hero-content"><p class="eyebrow lime">OFFICIAL CLIENT INSTANCE</p><h2>Jump in.<br><em>Play on.</em></h2><p>The launcher installs Fabric and verified Vortex required mods in an isolated instance. Your own mods stay separate for every version.</p><div class="action-row"><button class="play-button" id="playBtn"><span>▶</span><b id="playLabel">Launch Vortex</b><small id="selectedVersionLabel">1.21.11</small></button><button class="button vortex-join-button" id="joinOfficialServerBtn">Join VortexPvP</button><button class="button secondary" id="openInstancesBtn">Open Instances Folder</button></div><div class="parallel-launch-row"><select id="parallelAccountSelect" aria-label="Second Minecraft account" disabled><option value="">Add a second account first</option></select><button class="button secondary" id="launchSecondAccountBtn" disabled>Launch Second Account</button><small id="parallelLaunchHint">Use two separately licensed Minecraft accounts. Server rules still apply.</small></div></div><img class="hero-logo" src="../assets/branding/vortex-logo.png" alt="Vortex" /><div class="hero-glow"></div></div>
+        <div class="hero"><div class="hero-content"><p class="eyebrow lime">OFFICIAL CLIENT INSTANCE</p><h2>Jump in.<br><em>Play on.</em></h2><p>The launcher installs Fabric and verified Vortex required mods in an isolated instance. Your own mods stay separate for every version.</p><div class="action-row"><button class="play-button" id="playBtn"><span>▶</span><b id="playLabel">Launch Vortex</b><small id="selectedVersionLabel">1.21.11</small></button><button class="button vortex-join-button" id="joinOfficialServerBtn">Join VortexPvP</button><button class="button secondary" id="openInstancesBtn">Open Instances Folder</button></div></div><img class="hero-logo" src="../assets/branding/vortex-logo.png" alt="Vortex" /><div class="hero-glow"></div></div>
         <section class="quick-grid">
           <article class="info-card version-card"><div class="card-header"><div><p class="eyebrow">ACTIVE INSTANCE</p><h3>Minecraft Version</h3></div><span class="status-pill">FABRIC</span></div><select id="versionSelect" aria-label="Minecraft version"></select><div class="meta-row"><span>Vortex Client</span><strong id="coreStatus">Checking …</strong></div></article>
           <article class="info-card"><div class="card-header"><div><p class="eyebrow">MODS & FILES</p><h3>Your Instance</h3></div><span class="file-count" id="modCount">— mods</span></div><p class="card-copy">Every version has its own <code>mods</code> folder. Vortex required mods are protected; your additional compatible mods stay intact.</p><div class="folder-actions"><button class="button secondary" id="openModsBtn">Open Mods Folder</button><button class="button ghost" id="openInstanceBtn">Open Instance</button></div></article>
@@ -77,7 +77,7 @@
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource Pack Installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In This Instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>VORTEX CLIENT 0.9.40</span><span id="statusText">Launcher ready</span></footer>
+      <footer><span>VORTEX CLIENT 0.9.41</span><span id="statusText">Launcher ready</span></footer>
     </main>
   </div>
   <div class="news-modal" id="newsModal" hidden role="dialog" aria-modal="true" aria-labelledby="newsModalTitle">
