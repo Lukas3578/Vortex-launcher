@@ -48,6 +48,19 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.47',
+    title: 'Premium Skin Studio Redesign',
+    summary: 'The Skin Studio was rebuilt into a denser, more professional Vortex creation workspace with premium cards, stronger hierarchy and clearer active tools.',
+    items: [
+      'Redesigned the full Skin Studio into a modern premium gaming workspace with refined glass panels, clean gradients and consistent spacing.',
+      'Uses the available window width more effectively, reducing empty space while keeping the Canvas, 3D Preview and output workflow clear.',
+      'Upgraded the sidebar with clearer grouped navigation, stronger hover states, a refined active page state and a premium Vortex Core card.',
+      'Makes the Pixel Canvas the visual focus with deeper framing, cleaner guide lines, improved colour controls and selected-swatch feedback.',
+      'Improved the 3D character stage, rotation slider, output workflow, field styling, status surface and primary save/publish actions.',
+      'Keeps every existing Skin Studio, local preview and Community publishing function unchanged.'
+    ]
+  },
+  {
     version: '0.9.46',
     title: 'Skin Studio Visual Fix',
     summary: 'The Skin Studio now starts with a complete Vortex character, has a cleaner pixel atlas and shows a larger coherent Minecraft player preview instead of fragmented textures.',
@@ -407,7 +420,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.46 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.47 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
