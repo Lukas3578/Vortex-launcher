@@ -48,7 +48,7 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.51',
+    version: '0.9.52',
     title: 'Skin Studio Heading Cleanup',
     summary: 'The requested Skin Studio heading was removed, leaving a cleaner compact editor header without changing any tool or skin workflow.',
     items: [
@@ -469,7 +469,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.51 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.52 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -1527,7 +1527,6 @@ ipcMain.handle('reset-account-avatar', async (_event, id) => {
 ipcMain.handle('ai-get-state', () => aiStudio.getState());
 ipcMain.handle('ai-save-key', (_event, key, provider, textModel) => { try { return { ok: true, state: aiStudio.saveKey(key, provider, textModel) }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-remove-key', () => ({ ok: true, state: aiStudio.removeKey() }));
-ipcMain.handle('ai-generate-skin', async (_event, prompt) => { try { const result = await aiStudio.generateSkin(prompt); const state = loadState(); result.profile = makeCosmeticSkin(COSMETICS_MOD_VERSION, result.path, state.hat || 'vortex-cap', state.emblem || 'vortex-crest'); send('status', { type: 'success', message: `AI skin '${result.design.title}' was created locally.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-generate-cape', async (_event, prompt) => { try { const result = await aiStudio.generateCape(prompt); send('status', { type: 'success', message: `AI cape '${result.design.title}' was saved locally for ${result.instances} instance(s).` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-create-mod-project', async (_event, prompt) => { try { const result = await aiStudio.createModProject(prompt); send('status', { type: 'success', message: `Private mod project template '${result.design.title}' was created locally.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('ai-open-output', (_event, kind) => { const folder = aiStudio.openOutputFolder(kind); return shell.openPath(folder); });
@@ -1539,11 +1538,8 @@ ipcMain.handle('community-login', () => openCommunityLogin());
 ipcMain.handle('community-list-presets', async () => { try { return { ok: true, presets: await listCommunityPresets() }; } catch (error) { return { ok: false, presets: [], error: error.message }; } });
 ipcMain.handle('community-download-preset', async (_event, shareCode, filename) => { try { return await downloadCommunityPreset(shareCode, filename); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-upload-preset', async (_event, metadata) => { try { return await uploadCommunityPreset(metadata); } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('skin-studio-save', (_event, version, skinData, sourceName) => { try { return saveStudioSkinPreview(version || COSMETICS_MOD_VERSION, skinData, sourceName); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-list-skins', async () => { try { return { ok: true, skins: await listCommunitySkins() }; } catch (error) { return { ok: false, skins: [], error: error.message }; } });
-ipcMain.handle('community-upload-skin', async (_event, metadata) => { try { return await uploadCommunitySkin(metadata); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-download-skin', async (_event, shareCode) => { try { return await downloadCommunitySkin(shareCode); } catch (error) { return { ok: false, error: error.message }; } });
-ipcMain.handle('community-use-skin', async (_event, shareCode, version) => { try { return await useCommunitySkin(shareCode, version || COSMETICS_MOD_VERSION); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
@@ -1559,7 +1555,6 @@ ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = san
 ipcMain.handle('open-instance-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(instanceRoot(normalized)); return shell.openPath(instanceRoot(normalized)); });
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
 ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
-ipcMain.handle('open-skins-folder', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'Cosmetics skins are only available for 1.21.11.' }; ensureDir(previewSkinsRoot(version)); return shell.openPath(previewSkinsRoot(version)); });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
 ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
 ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
@@ -1579,34 +1574,6 @@ ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {
   // Cape-Auswahl bleibt eine echte Cape-Auswahl. Keine Skin-Variante mehr erzeugen:
   // Das alte Skin-Overlay war die blockartige Fläche auf Brust und Armen.
   return { ok: true, hat: saved.hat, emblem: saved.emblem, profile: null, capeOnly: true };
-});
-ipcMain.handle('get-cosmetic-skin-preview', (_event, version = COSMETICS_MOD_VERSION) => cosmeticSkinPreview(version));
-ipcMain.handle('import-cosmetic-skin', async (_event, version, cosmetics = {}) => {
-  try {
-    const normalized = sanitizeVersion(version);
-    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('The cosmetics workshop is available in this release for Minecraft 1.21.11.');
-    const hat = HATS.includes(cosmetics.hat) ? cosmetics.hat : loadState().hat;
-    const emblem = EMBLEMS.includes(cosmetics.emblem) ? cosmetics.emblem : loadState().emblem;
-    const choice = await dialog.showOpenDialog(mainWindow, { title: 'Choose Minecraft skin for Vortex Cosmetics', properties: ['openFile'], filters: [{ name: 'Minecraft skin (PNG, 64×64)', extensions: ['png'] }] });
-    if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true };
-    const profile = makeCosmeticSkin(normalized, choice.filePaths[0], hat, emblem);
-    saveState({ hat, emblem });
-    send('status', { type: 'success', message: 'Cosmetic skin created. In Minecraft open the Skin Wardrobe and select the new variant.' });
-    return { ok: true, profile, summary: getInstanceSummary(normalized) };
-  } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; }
-});
-ipcMain.handle('import-cosmetic-skin-by-username', async (_event, version, username, cosmetics = {}) => {
-  try {
-    const normalized = sanitizeVersion(version);
-    if (normalized !== COSMETICS_MOD_VERSION) throw new Error('Skin management is available in this release for Minecraft 1.21.11.');
-    const hat = HATS.includes(cosmetics.hat) ? cosmetics.hat : loadState().hat;
-    const emblem = EMBLEMS.includes(cosmetics.emblem) ? cosmetics.emblem : loadState().emblem;
-    const imported = await fetchMinecraftSkinByUsername(username);
-    const profile = makeCosmeticSkin(normalized, imported.file, hat, emblem);
-    saveState({ hat, emblem });
-    send('status', { type: 'success', message: `Imported skin from ${imported.username} and created as a Vortex variant.` });
-    return { ok: true, profile, username: imported.username, summary: getInstanceSummary(normalized) };
-  } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; }
 });
 ipcMain.handle('show-cosmetics-info', () => dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vortex Cosmetics in the Launcher', buttons: ['Got it'], message: 'Vortex Capes are rendered as real capes behind the player.', detail: 'Select a cape in the launcher. The selected cape is written to the Vortex cosmetics profile and rendered on the player’s back. The launcher no longer creates a chest or body skin overlay. Vortex players can see each other’s selected capes when using the updated client and addon.' }));
 
