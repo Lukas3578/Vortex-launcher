@@ -20,7 +20,7 @@ const HATS = ['none', 'vortex-cap', 'neon-halo', 'void-crown', 'cyber-headphones
 const EMBLEMS = ['none', 'vortex-crest', 'nebula-mark', 'void-rune'];
 const BUNDLED_TEXTURED_CAPES = new Set(EMBLEMS.filter(id => id !== 'none'));
 let mainWindow;
-let minecraftProcess;
+const minecraftProcesses = new Map();
 let account = null;
 let accounts = [];
 let updateState = { status: 'idle', currentVersion: app.getVersion(), availableVersion: null, progress: 0, error: null };
@@ -48,14 +48,14 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
-    version: '0.9.38',
-    title: 'Real 3D hat selection repair',
-    summary: 'Every hat selection is now written into the Minecraft Cosmetics Core profile, so Cap, Halo, Crown, Headphones and Antennae each render as their own real 3D form instead of always showing a ring.',
+    version: '0.9.39',
+    title: 'Parallel two-account Minecraft launch',
+    summary: 'Launch a second separately licensed Minecraft account in its own Vortex game folder while the primary account is already running.',
     items: [
-      'Writes the selected hat directly into the Cosmetics Core configuration for every Vortex Minecraft instance.',
-      'Preserves the 3D hat configuration during instance maintenance instead of deleting it with retired skin-overlay files.',
-      'Uses the Core’s distinct real 3D geometries: Vortex Cap, Neon Halo, Void Crown, Cyber Headphones and Slime Antennae.',
-      'Updates the launcher cards so each choice clearly states its actual 3D shape.'
+      'Adds a second-account selector on the Launch page for any other saved Minecraft account.',
+      'Starts the selected second account with a distinct process handle and a separate game directory to avoid Minecraft session-lock conflicts.',
+      'Keeps the verified Vortex Fabric base, Minecraft version and selected server context for both accounts.',
+      'Prevents using the same saved account twice and provides clear status messages for each running session.'
     ]
   },
   {
@@ -369,7 +369,7 @@ function clearWebsiteCape() {
 function applyWebsiteCapeChoice(version) { const stored = loadJson(websiteCapeChoiceFile(), null); const legacyEmblem = loadState().emblem; const fallbackCape = BUNDLED_TEXTURED_CAPES.has(legacyEmblem) ? legacyEmblem : null; const choice = stored && (stored.cape === null || isCapeId(stored.cape)) ? stored : { cape: fallbackCape, updatedAt: new Date().toISOString(), source: 'bodyfit-migration' }; if (!stored) writeJson(websiteCapeChoiceFile(), choice); try { if (choice.cape) installBundledCape(version, choice.cape); const target = websiteCapeConfigPath(version); ensureDir(path.dirname(target)); writeJson(target, choice); } catch (_) {} }
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const COMMUNITY_BASE_URL = 'https://vortex-client.onrender.com';
-const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.38 (github.com/Lukas3578/Vortex-launcher)';
+const MODRINTH_USER_AGENT = 'Lukas3578/Vortex-launcher/0.9.39 (github.com/Lukas3578/Vortex-launcher)';
 function modrinthHeaders() { return { Accept: 'application/json', 'User-Agent': MODRINTH_USER_AGENT }; }
 function validModrinthVersion(version) { return sanitizeVersion(version); }
 async function modrinthJson(url) {
@@ -782,6 +782,13 @@ function saveAccount(value) {
   saveAccounts();
   return account;
 }
+function updateAccountSession(value) {
+  const id = accountId(value);
+  accounts = [value, ...accounts.filter(entry => accountId(entry) !== id)];
+  if (account && accountId(account) === id) account = value;
+  saveAccounts();
+  return value;
+}
 async function signInToMinecraft() {
   const authManager = new Auth('select_account');
   const xboxManager = await authManager.launch('electron', { width: 520, height: 720, resizable: false });
@@ -804,7 +811,7 @@ async function refreshMinecraftAuthorization(savedAccount) {
     const refreshedAuth = minecraft?.mclc?.(true);
     if (!refreshedAuth?.access_token || !refreshedAuth?.meta?.refresh || !profile?.id) throw new Error('The refreshed Minecraft session is incomplete.');
     const refreshedAccount = { ...savedAccount, username: profile.name || savedAccount.username, uuid: profile.id || savedAccount.uuid, auth: refreshedAuth };
-    saveAccount(refreshedAccount);
+    updateAccountSession(refreshedAccount);
     return refreshedAuth;
   } catch (error) {
     throw new Error(`Minecraft session refresh failed. Sign in again to continue. (${error.message || error})`);
@@ -1084,6 +1091,53 @@ async function ensureInstance(version) {
   return { ...getInstanceSummary(normalized), installed, replaced, fabric };
 }
 
+function parallelGameRoot(version, accountValue) {
+  const accountKey = safeFileName(accountId(accountValue)).slice(0, 48);
+  return path.join(instancesRoot, `${version}-parallel-${accountKey}`);
+}
+function copyParallelDirectory(source, target) {
+  if (!exists(source)) return;
+  fs.cpSync(source, target, { recursive: true, force: true, dereference: true });
+}
+function prepareParallelGameDirectory(version, accountValue) {
+  const base = instanceRoot(version);
+  const target = parallelGameRoot(version, accountValue);
+  ensureDir(target);
+  // Libraries, assets and Fabric version metadata remain shared through the prepared
+  // base root. Only actual game data is copied, avoiding Minecraft's session lock.
+  for (const name of ['mods', 'config', 'resourcepacks', 'shaderpacks']) copyParallelDirectory(path.join(base, name), path.join(target, name));
+  for (const name of ['options.txt', 'servers.dat']) {
+    const source = path.join(base, name);
+    if (exists(source)) { ensureDir(target); fs.copyFileSync(source, path.join(target, name)); }
+  }
+  return target;
+}
+function runningProcessKey(kind, accountValue) { return `${kind}:${accountId(accountValue)}`; }
+async function startMinecraftSession({ accountValue, version, server, parallel }) {
+  if (!accountValue?.auth) throw new Error('Please sign in to a Minecraft Microsoft account first.');
+  const key = runningProcessKey(parallel ? 'parallel' : 'primary', accountValue);
+  if (minecraftProcesses.has(key)) throw new Error(`${accountValue.username} already has a running Vortex Minecraft session.`);
+  if (!parallel && [...minecraftProcesses.values()].some(entry => entry.kind === 'primary')) throw new Error('The primary Vortex instance is already running. Use the second-account launcher for a parallel session.');
+  const authorization = await refreshMinecraftAuthorization(accountValue);
+  const instance = await ensureInstance(version);
+  const gameDirectory = parallel ? prepareParallelGameDirectory(version, accountValue) : instance.root;
+  const launcher = new Client();
+  launcher.on('debug', message => send('log', String(message)));
+  launcher.on('data', message => send('log', String(message)));
+  launcher.on('download-status', data => send('progress', data));
+  launcher.on('progress', data => send('progress', data));
+  const javaPath = await javaPathForVersion(version);
+  const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory }, window: parallel ? { width: 960, height: 620 } : { width: 1280, height: 720 } };
+  if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
+  const child = await launcher.launch(options);
+  minecraftProcesses.set(key, { child, kind: parallel ? 'parallel' : 'primary', username: accountValue.username, accountId: accountId(accountValue), gameDirectory });
+  child.on('close', code => {
+    minecraftProcesses.delete(key);
+    send('status', { type: 'info', message: `${accountValue.username}'s ${parallel ? 'second-account' : 'Minecraft'} session exited (Code ${code}).` });
+  });
+  return { server: server ? { id: server.id, name: server.name, address: server.address } : null, username: accountValue.username, gameDirectory, parallel };
+}
+
 function writePixel(png, x, y, color) {
   if (x < 0 || y < 0 || x >= 64 || y >= 64) return;
   const index = (png.width * y + x) << 2;
@@ -1342,26 +1396,27 @@ ipcMain.handle('logout', () => { if (!account) return { ok: true, account: null,
 ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = null) => {
   const version = sanitizeVersion(requestedVersion || loadState().selectedVersion);
   const server = requestedServerId ? serverById(requestedServerId) : null;
-  if (!account?.auth) return { ok: false, error: 'Please sign in to your Minecraft Microsoft account first.' };
   if (!version) return { ok: false, error: 'Select a supported Vortex version.' };
   if (requestedServerId && !server) return { ok: false, error: 'The selected server was not found.' };
-  if (minecraftProcess) return { ok: false, error: 'Minecraft is already running.' };
   try {
     send('status', { type: 'info', message: 'Refreshing Minecraft session …' });
-    const authorization = await refreshMinecraftAuthorization(account);
-    const instance = await ensureInstance(version);
-    const launcher = new Client();
-    launcher.on('debug', message => send('log', String(message)));
-    launcher.on('data', message => send('log', String(message)));
-    launcher.on('download-status', data => send('progress', data));
-    launcher.on('progress', data => send('progress', data));
-    send('status', { type: 'info', message: server ? `Starting ${server.name} (${server.address}) with Vortex Client ${version} …` : `Starting Vortex Client ${version} with Fabric …` });
-    const javaPath = await javaPathForVersion(version);
-    const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory: instance.root }, window: { width: 1280, height: 720 } };
-    if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
-    minecraftProcess = await launcher.launch(options);
-    minecraftProcess.on('close', code => { minecraftProcess = null; send('status', { type: 'info', message: `Minecraft exited (Code ${code}).` }); });
-    send('status', { type: 'success', message: server ? `Minecraft is launching directly with ${server.name}.` : 'Minecraft has been started with the Vortex Fabric instance.' });
-    return { ok: true, server: server ? { id: server.id, name: server.name, address: server.address } : null };
-  } catch (error) { minecraftProcess = null; send('status', { type: 'error', message: `Launch failed: ${error.message}` }); return { ok: false, error: error.message }; }
+    const result = await startMinecraftSession({ accountValue: account, version, server, parallel: false });
+    send('status', { type: 'success', message: server ? `${result.username} is launching directly with ${server.name}.` : `${result.username}'s Vortex Fabric instance has started.` });
+    return { ok: true, ...result };
+  } catch (error) { send('status', { type: 'error', message: `Launch failed: ${error.message}` }); return { ok: false, error: error.message }; }
+});
+ipcMain.handle('launch-parallel', async (_event, requestedVersion, requestedServerId, requestedAccountId) => {
+  const version = sanitizeVersion(requestedVersion || loadState().selectedVersion);
+  const server = requestedServerId ? serverById(requestedServerId) : null;
+  const secondary = accounts.find(entry => accountId(entry) === String(requestedAccountId || '')) || null;
+  if (!version) return { ok: false, error: 'Select a supported Vortex version.' };
+  if (requestedServerId && !server) return { ok: false, error: 'The selected server was not found.' };
+  if (!secondary?.auth) return { ok: false, error: 'Choose a second saved Minecraft account first.' };
+  if (account && accountId(secondary) === accountId(account)) return { ok: false, error: 'Choose a different Minecraft account for the parallel session.' };
+  try {
+    send('status', { type: 'info', message: `Preparing a separate instance for ${secondary.username} …` });
+    const result = await startMinecraftSession({ accountValue: secondary, version, server, parallel: true });
+    send('status', { type: 'success', message: `${result.username}'s separate Vortex instance is launching${server ? ` into ${server.name}` : ''}.` });
+    return { ok: true, ...result };
+  } catch (error) { send('status', { type: 'error', message: `Second-account launch failed: ${error.message}` }); return { ok: false, error: error.message }; }
 });
