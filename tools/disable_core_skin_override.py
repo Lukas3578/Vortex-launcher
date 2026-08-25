@@ -2,7 +2,7 @@ from pathlib import Path
 import json
 import zipfile
 
-jar_path = Path('/home/ubuntu/Vortex-launcher/assets/modpacks/1.21.11/vortexclient-2.29.9-cosmetics.jar')
+jar_path = Path('/home/ubuntu/Vortex-launcher/assets/modpacks/1.21.11/vortexclient-2.28.2.jar')
 entry_name = 'vortexclient.client.mixins.json'
 
 with zipfile.ZipFile(jar_path, 'r') as source:
