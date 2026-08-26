@@ -54,6 +54,9 @@ jobs:
           - Die Community ist wieder sichtbar und enthält jetzt ausschließlich Presets und Macros, ohne Community-Skins.
           - Die echte installierte Launcher-Version wird dynamisch im Footer angezeigt.
           - F11 und Escape werden direkt im Electron-Fenster verarbeitet und funktionieren dadurch zuverlässig.
+          - Der Mod Installer zeigt jetzt bis zu 18 kompatible Treffer statt nur einer kleinen Auswahl.
+          - Client-Side-Mods werden automatisch priorisiert; optionale, serverseitige und allgemeine kompatible Mods sind eindeutig markiert.
+          - Modrinth-Kompatibilität, Version und Installationsstatus werden direkt auf jeder Ergebnis-Karte angezeigt.
           - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
           - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.

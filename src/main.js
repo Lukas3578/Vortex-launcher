@@ -695,16 +695,17 @@ async function searchModrinth(query, gameVersion, page = 0) {
   if (!normalizedVersion) throw new Error('This Minecraft version is not supported.');
   if (normalizedQuery.length < 2) return { results: [], page: normalizedPage, pageSize: 12, total: 0, hasNext: false };
   const facets = JSON.stringify([['project_type:mod'], [`versions:${normalizedVersion}`], ['categories:fabric']]);
-  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '12', offset: String(normalizedPage * 12), index: 'relevance' });
+  const params = new URLSearchParams({ query: normalizedQuery, facets, limit: '18', offset: String(normalizedPage * 18), index: 'relevance' });
   const result = await modrinthJson(`${MODRINTH_API}/search?${params}`);
   const suggestions = await Promise.all(result.hits.map(async hit => {
     try {
       const compatible = await getCompatibleModVersion(hit.project_id, normalizedVersion);
       if (!compatible) return null;
-      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, author: hit.author || '', description: hit.description || 'No description available.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], gameVersion: normalizedVersion, installed: isProjectInstalled(normalizedVersion, hit.project_id), ...compatible };
+      return { projectId: hit.project_id, slug: hit.slug, title: hit.title, author: hit.author || '', description: hit.description || 'No description available.', iconUrl: hit.icon_url || null, downloads: hit.downloads || 0, categories: hit.display_categories || hit.categories || [], clientSide: hit.client_side || 'unknown', serverSide: hit.server_side || 'unknown', modType: hit.client_side === 'required' || hit.client_side === 'optional' ? 'Client-side' : hit.server_side === 'required' ? 'Server-side' : 'Compatible', gameVersion: normalizedVersion, installed: isProjectInstalled(normalizedVersion, hit.project_id), ...compatible };
     } catch (_) { return null; }
   }));
-  return { results: suggestions.filter(Boolean), page: normalizedPage, pageSize: 12, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 12 < (result.total_hits || 0) };
+  const ranked = suggestions.filter(Boolean).sort((a, b) => { const rank = value => value === 'required' ? 0 : value === 'optional' ? 1 : 2; return rank(a.clientSide) - rank(b.clientSide) || Number(b.downloads || 0) - Number(a.downloads || 0); });
+  return { results: ranked, page: normalizedPage, pageSize: 18, total: result.total_hits || 0, hasNext: (normalizedPage + 1) * 18 < (result.total_hits || 0) };
 }
 async function getCompatibleResourcePackVersion(projectId, gameVersion) {
   const params = new URLSearchParams({ game_versions: JSON.stringify([gameVersion]), limit: '10' });
