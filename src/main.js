@@ -1436,14 +1436,14 @@ function prepareParallelGameDirectory(version, accountValue) {
   return target;
 }
 function runningProcessKey(kind, accountValue) { return `${kind}:${accountId(accountValue)}`; }
-async function startMinecraftSession({ accountValue, version, server, parallel }) {
+async function startMinecraftSession({ accountValue, version, server, parallel, gameDirectoryOverride = null }) {
   if (!accountValue?.auth) throw new Error('Please sign in to a Minecraft Microsoft account first.');
   const key = runningProcessKey(parallel ? 'parallel' : 'primary', accountValue);
   if ([...minecraftProcesses.values()].some(entry => entry.accountId === accountId(accountValue))) throw new Error(`${accountValue.username} already has a running Vortex Minecraft session.`);
   if (!parallel && [...minecraftProcesses.values()].some(entry => entry.kind === 'primary')) throw new Error('The primary Vortex instance is already running. Switch to another saved account and use Launch Vortex again.');
   const authorization = await refreshMinecraftAuthorization(accountValue);
   const instance = await ensureInstance(version);
-  const gameDirectory = parallel ? prepareParallelGameDirectory(version, accountValue) : instance.root;
+  const gameDirectory = gameDirectoryOverride || (parallel ? prepareParallelGameDirectory(version, accountValue) : instance.root);
   const launcher = new Client();
   launcher.on('debug', message => send('log', String(message)));
   launcher.on('data', message => send('log', String(message)));
@@ -1754,6 +1754,8 @@ async function fetchVerifiedBuffer(url, sha512 = null) {
   return buffer;
 }
 function installedModpacksFile() { return path.join(dataRoot, 'installed-modpacks.json'); }
+function modpackInstanceRoot(instanceId) { return path.join(instancesRoot, 'modpacks', safeFileName(instanceId)); }
+function modpackInstanceId(version, name) { return `${version}-${safeFileName(String(name || 'pack').toLowerCase()).slice(0, 42)}-${Date.now()}`; }
 function loadInstalledModpacks() { const value = loadJson(installedModpacksFile(), []); return Array.isArray(value) ? value : []; }
 function saveInstalledModpacks(value) { writeJson(installedModpacksFile(), value.slice(0, 100)); }
 async function installMrpackFile(version, filePath) {
@@ -1761,7 +1763,7 @@ async function installMrpackFile(version, filePath) {
   const source = path.resolve(filePath); if (!fs.existsSync(source) || path.extname(source).toLowerCase() !== '.mrpack') throw new Error('Please choose a valid .mrpack file.');
   const archive = await JSZip.loadAsync(fs.readFileSync(source)); const indexEntry = archive.file('modrinth.index.json'); if (!indexEntry) throw new Error('This file is not a valid Modrinth Modpack.');
   const index = JSON.parse(await indexEntry.async('string')); if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.'); const requiredMinecraft = String(index.dependencies?.minecraft || ''); if (requiredMinecraft && !requiredMinecraft.includes(normalized)) throw new Error(`This pack requires Minecraft ${requiredMinecraft}, but the selected instance is ${normalized}.`);
-  const targetRoot = instanceRoot(normalized); ensureDir(targetRoot); const installed = []; const skipped = [];
+  const instanceId = modpackInstanceId(normalized, index.name || path.basename(source, '.mrpack')); const targetRoot = modpackInstanceRoot(instanceId); ensureDir(targetRoot); const installed = []; const skipped = []; const baseInstance = await ensureInstance(normalized); const baseRequiredMods = modsRoot(normalized); for (const requiredName of mandatoryModNames(normalized)) { const requiredPath = path.join(baseRequiredMods, requiredName); if (exists(requiredPath)) { ensureDir(path.join(targetRoot, 'mods')); fs.copyFileSync(requiredPath, path.join(targetRoot, 'mods', requiredName)); } }
   for (const entry of Array.isArray(index.files) ? index.files : []) {
     const safePath = modpackArchiveSafePath(entry.path); if (!safePath || !Array.isArray(entry.downloads) || !entry.downloads[0]) { skipped.push(entry.path || 'unknown'); continue; }
     const buffer = await fetchVerifiedBuffer(entry.downloads[0], entry.hashes?.sha512); const target = path.join(targetRoot, safePath); ensureDir(path.dirname(target)); fs.writeFileSync(target, buffer); installed.push(safePath);
@@ -1769,7 +1771,7 @@ async function installMrpackFile(version, filePath) {
   for (const prefix of ['overrides/', 'client-overrides/']) {
     for (const entry of Object.values(archive.files)) { if (entry.dir || !entry.name.startsWith(prefix)) continue; const safePath = modpackArchiveSafePath(entry.name.slice(prefix.length)); if (!safePath) continue; const target = path.join(targetRoot, safePath); ensureDir(path.dirname(target)); fs.writeFileSync(target, await entry.async('nodebuffer')); }
   }
-  const packRecord = { id: `${normalized}:${index.name || path.basename(source, '.mrpack')}`, name: index.name || path.basename(source, '.mrpack'), packVersion: index.versionId || '', targetVersion: normalized, fileCount: installed.length, installedAt: new Date().toISOString() }; const existing = loadInstalledModpacks().filter(item => item.id !== packRecord.id); saveInstalledModpacks([packRecord, ...existing]);
+  const packRecord = { id: instanceId, name: index.name || path.basename(source, '.mrpack'), packVersion: index.versionId || '', targetVersion: normalized, instanceId, instancePath: targetRoot, fileCount: installed.length, installedAt: new Date().toISOString() }; const existing = loadInstalledModpacks().filter(item => item.id !== packRecord.id); saveInstalledModpacks([packRecord, ...existing]);
   return { ok: true, name: packRecord.name, version: packRecord.packVersion, installed, skipped, targetVersion: normalized };
 }
 async function exportMrpackFile(version, metadata = {}) {
@@ -1784,4 +1786,13 @@ ipcMain.handle('download-modpack', async (_event, version, pack) => { try { cons
 ipcMain.handle('import-mrpack', async (_event, version) => { try { const result = await dialog.showOpenDialog(mainWindow, { title: 'Import Modrinth Modpack', properties: ['openFile'], filters: [{ name: 'Modrinth Modpack', extensions: ['mrpack'] }] }); if (result.canceled || !result.filePaths[0]) return { ok: false, canceled: true }; return await installMrpackFile(version, result.filePaths[0]); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('export-mrpack', async (_event, version, metadata) => { try { return await exportMrpackFile(version, metadata); } catch (error) { return { ok: false, error: error.message }; } });
 
-ipcMain.handle('list-installed-modpacks', () => loadInstalledModpacks().map(item => ({ ...item, exists: fs.existsSync(instanceRoot(item.targetVersion)) })));
+ipcMain.handle('list-installed-modpacks', () => loadInstalledModpacks().map(item => ({ ...item, exists: fs.existsSync(item.instancePath || modpackInstanceRoot(item.instanceId || item.id)) })));
+ipcMain.handle('open-modpack-folder', (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; const folder = pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id); ensureDir(folder); return shell.openPath(folder); });
+ipcMain.handle('launch-modpack', async (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; try { const parallel = [...minecraftProcesses.values()].some(entry => entry.kind === 'primary'); const result = await startMinecraftSession({ accountValue: account, version: pack.targetVersion, server: null, parallel, gameDirectoryOverride: pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id) }); send('status', { type: 'success', message: `${pack.name} is launching in its own instance.` }); return { ok: true, ...result, modpack: pack.name }; } catch (error) { send('status', { type: 'error', message: `Modpack launch failed: ${error.message}` }); return { ok: false, error: error.message }; } });
+
+async function listCommunityModpacks() { const packs = await communityFetch('/api/modpacks'); return Array.isArray(packs) ? packs : []; }
+async function downloadCommunityModpack(shareCode, version) { const code = String(shareCode || ''); if (!/^[a-f0-9]{8,32}$/i.test(code)) throw new Error('Invalid community modpack.'); const cookie = await communityCookieHeader(); const headers = { Accept: 'application/x-modrinth-modpack' }; if (cookie) headers.Cookie = cookie; const response = await fetch(`${COMMUNITY_BASE_URL}/api/modpacks/${encodeURIComponent(code)}/download`, { headers, signal: AbortSignal.timeout(60000) }); if (!response.ok) throw new Error(`Community modpack responded with ${response.status}.`); const buffer = Buffer.from(await response.arrayBuffer()); if (!buffer.length || buffer.length > 25 * 1024 * 1024) throw new Error('The community modpack is too large.'); const temp = path.join(app.getPath('temp'), `vortex-community-${Date.now()}.mrpack`); fs.writeFileSync(temp, buffer); try { return await installMrpackFile(version, temp); } finally { fs.rmSync(temp, { force: true }); } }
+async function uploadCommunityModpack(metadata = {}) { const state = await getCommunityState(); if (!state.websiteAccount?.username) throw new Error('Please sign in to the community window first.'); const choice = await dialog.showOpenDialog(mainWindow, { title: 'Publish Modrinth Modpack', properties: ['openFile'], filters: [{ name: 'Modrinth Modpack', extensions: ['mrpack'] }] }); if (choice.canceled || !choice.filePaths[0]) return { ok: false, canceled: true }; const source = choice.filePaths[0]; const buffer = fs.readFileSync(source); if (!buffer.length || buffer.length > 25 * 1024 * 1024) throw new Error('The MRPACK must be between 1 byte and 25 MB.'); const archive = await JSZip.loadAsync(buffer); const indexEntry = archive.file('modrinth.index.json'); if (!indexEntry) throw new Error('The selected file is not a valid Modrinth Modpack.'); const index = JSON.parse(await indexEntry.async('string')); const name = String(metadata.name || index.name || path.basename(source, '.mrpack')).trim().slice(0, 60); const description = String(metadata.description || index.summary || '').trim().slice(0, 500); const result = await communityFetch('/api/modpacks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description, visibility: metadata.visibility === 'unlisted' ? 'unlisted' : 'public', version: String(index.versionId || '1.0.0').slice(0, 32), minecraftVersion: String(index.dependencies?.minecraft || metadata.minecraftVersion || '').slice(0, 32), loader: 'fabric', filename: path.basename(source), contentBase64: buffer.toString('base64') }) }); return { ok: true, shareCode: result.shareCode || null, name }; }
+ipcMain.handle('community-list-modpacks', async () => { try { return { ok: true, packs: await listCommunityModpacks() }; } catch (error) { return { ok: false, packs: [], error: error.message }; } });
+ipcMain.handle('community-download-modpack', async (_event, shareCode, version) => { try { return { ok: true, ...(await downloadCommunityModpack(shareCode, version)) }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('community-upload-modpack', async (_event, metadata) => { try { return await uploadCommunityModpack(metadata); } catch (error) { return { ok: false, error: error.message }; } });
