@@ -57,6 +57,9 @@ jobs:
           - Der Mod Installer zeigt jetzt bis zu 18 kompatible Treffer statt nur einer kleinen Auswahl.
           - Client-Side-Mods werden automatisch priorisiert; optionale, serverseitige und allgemeine kompatible Mods sind eindeutig markiert.
           - Modrinth-Kompatibilität, Version und Installationsstatus werden direkt auf jeder Ergebnis-Karte angezeigt.
+          - Neue Modpack-Kategorie mit Modrinth-Suche, 18 Pack-Ergebnissen und direktem Download & Install.
+          - Bestehende Modrinth .mrpack-Dateien können sicher in die gewählte Fabric-Instanz importiert werden.
+          - Die aktuelle Instanz kann als Modrinth-kompatible .mrpack-Datei exportiert werden.
           - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
           - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
