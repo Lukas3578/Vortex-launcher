@@ -38,6 +38,7 @@ const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
 const instancesRoot = path.join(dataRoot, 'instances');
 const accountFile = path.join(dataRoot, 'account.json');
 const stateFile = path.join(dataRoot, 'launcher-state.json');
+const customVersionsFile = path.join(dataRoot, 'minecraft-versions.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
 const serversFile = path.join(dataRoot, 'servers.json');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
@@ -47,6 +48,17 @@ const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUP
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  {
+    version: '0.9.69',
+    title: 'Universal Minecraft Versions',
+    summary: 'Use any Minecraft release with automatic Fabric provisioning and metadata-driven Modrinth pack instances.',
+    items: [
+      'The version selector now accepts valid Minecraft releases beyond the bundled Vortex Client versions.',
+      'Versions without a Vortex core mod launch as clean Fabric instances instead of being blocked.',
+      'Imported and downloaded MRPACK files read dependencies.minecraft and provision their exact release automatically.',
+      'Every modpack remains isolated under instances/modpacks with its own launchable game directory.'
+    ]
+  },
   {
     version: '0.9.64',
     title: 'Launcher Stability Update',
@@ -482,7 +494,27 @@ function skinsRoot(version) { return path.join(vortexConfigRoot(version), 'skins
 function previewSkinsRoot(version) { return path.join(instanceRoot(version), 'config', 'vortexlauncher', 'skin-previews'); }
 function previewProfileFile(version) { return path.join(instanceRoot(version), 'config', 'vortexlauncher', 'skin-preview.json'); }
 function profileFile(version) { return path.join(vortexConfigRoot(version), 'launcher-cosmetics.json'); }
-function sanitizeVersion(version) { return SUPPORTED_VERSIONS.includes(version) ? version : null; }
+function isValidMinecraftVersion(version) {
+  const value = String(version || '').trim().replace(/^v/i, '');
+  return /^(?:1\.[0-9]+(?:\.[0-9]+)?|[2-9][0-9](?:\.[0-9]+){1,2})$/.test(value);
+}
+function customMinecraftVersions() {
+  const stored = loadJson(customVersionsFile, []);
+  return Array.isArray(stored) ? stored.filter(isValidMinecraftVersion).map(value => String(value).replace(/^v/i, '')) : [];
+}
+function availableMinecraftVersions() {
+  return [...new Set([...SUPPORTED_VERSIONS, ...customMinecraftVersions()])].filter(isValidMinecraftVersion).sort(compareVersions).reverse();
+}
+function registerMinecraftVersion(version) {
+  const normalized = String(version || '').trim().replace(/^v/i, '');
+  if (!isValidMinecraftVersion(normalized)) return null;
+  writeJson(customVersionsFile, [...new Set([...customMinecraftVersions(), normalized])].sort(compareVersions).reverse());
+  return normalized;
+}
+function sanitizeVersion(version) {
+  const normalized = String(version || '').trim().replace(/^v/i, '');
+  return isValidMinecraftVersion(normalized) && availableMinecraftVersions().includes(normalized) ? normalized : null;
+}
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
 function exists(file) { return fs.existsSync(file); }
 function launchLogPath() { return path.join(dataRoot, 'launch.log'); }
@@ -1167,7 +1199,7 @@ async function refreshServerStatus(id, force = false) {
 function loadState() {
   const legacy = loadJson(stateFile, {});
   return {
-    selectedVersion: SUPPORTED_VERSIONS.includes(legacy.selectedVersion) ? legacy.selectedVersion : COSMETICS_MOD_VERSION,
+    selectedVersion: sanitizeVersion(legacy.selectedVersion) || COSMETICS_MOD_VERSION,
     selectedServerId: serverById(legacy.selectedServerId)?.id || OFFICIAL_SERVER.id,
     hat: HATS.includes(legacy.hat) ? legacy.hat : 'vortex-cap',
     emblem: EMBLEMS.includes(legacy.emblem) ? legacy.emblem : 'vortex-crest'
@@ -1370,12 +1402,12 @@ function cleanReplacedVortexJars(version, modsDir) {
 
 async function ensureInstance(version) {
   const normalized = sanitizeVersion(version);
-  if (!normalized) throw new Error('This Minecraft version is not supported by the Vortex Client.');
+  if (!normalized) throw new Error('Invalid Minecraft release version. Use a release such as 1.20.1 or 26.2.');
   const root = instanceRoot(normalized);
   const mods = modsRoot(normalized);
   ensureDir(mods);
   ensureDir(vortexConfigRoot(normalized));
-  send('status', { type: 'info', message: `Checking Vortex instance ${normalized}…` });
+  send('status', { type: 'info', message: `Preparing Minecraft ${normalized}${bundledModFiles(normalized).length ? ' with Vortex enhancements' : ' with Fabric (vanilla-compatible)'}…` });
   const { installed, replaced } = maintainBundledMods(normalized);
   const requiredFiles = bundledModFiles(normalized);
   const missingFiles = requiredFiles.filter(name => !exists(path.join(mods, name)));
@@ -1410,7 +1442,7 @@ async function ensureInstance(version) {
   });
   send('status', { type: 'info', message: `Preparing Fabric for ${normalized}…` });
   const fabric = await installFabricProfile(normalized, root);
-  send('status', { type: 'success', message: `Instance ${normalized} ready: Fabric ${fabric.loaderVersion}, ${bundledModFiles(normalized).length} required mods verified.` });
+  send('status', { type: 'success', message: `Minecraft ${normalized} ready: Fabric ${fabric.loaderVersion}${bundledModFiles(normalized).length ? `, ${bundledModFiles(normalized).length} Vortex mods verified` : ', no Vortex core required'}.` });
   return { ...getInstanceSummary(normalized), installed, replaced, fabric };
 }
 
@@ -1614,7 +1646,7 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
-ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: availableMinecraftVersions().map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
 ipcMain.handle('toggle-fullscreen', () => { if (!mainWindow) return false; const next = !mainWindow.isFullScreen(); mainWindow.setFullScreen(next); return next; });
 ipcMain.handle('is-fullscreen', () => Boolean(mainWindow?.isFullScreen()));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
@@ -1669,7 +1701,11 @@ ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try 
 ipcMain.handle('check-for-updates', () => checkForUpdates());
 ipcMain.handle('download-update', () => downloadUpdate());
 ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'No downloaded update available.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });
-ipcMain.handle('select-version', (_event, version) => ({ ok: Boolean(sanitizeVersion(version)), state: saveState({ selectedVersion: version }) }));
+ipcMain.handle('select-version', (_event, version) => {
+  const normalized = registerMinecraftVersion(version);
+  if (!normalized) return { ok: false, error: 'Enter a valid Minecraft release version, for example 1.20.1 or 26.2.' };
+  return { ok: true, state: saveState({ selectedVersion: normalized }), versions: availableMinecraftVersions().map(getInstanceSummary) };
+});
 ipcMain.handle('prepare-instance', async (_event, version) => { try { return { ok: true, instance: await ensureInstance(version) }; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('get-instance-summary', (_event, version) => getInstanceSummary(version));
 ipcMain.handle('open-mods-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(modsRoot(normalized)); return shell.openPath(modsRoot(normalized)); });
@@ -1759,11 +1795,29 @@ function modpackInstanceId(version, name) { return `${version}-${safeFileName(St
 function loadInstalledModpacks() { const value = loadJson(installedModpacksFile(), []); return Array.isArray(value) ? value : []; }
 function saveInstalledModpacks(value) { writeJson(installedModpacksFile(), value.slice(0, 100)); }
 async function installMrpackFile(version, filePath) {
-  const normalized = sanitizeVersion(version); if (!normalized) throw new Error('Invalid Minecraft version.');
-  const source = path.resolve(filePath); if (!fs.existsSync(source) || path.extname(source).toLowerCase() !== '.mrpack') throw new Error('Please choose a valid .mrpack file.');
-  const archive = await JSZip.loadAsync(fs.readFileSync(source)); const indexEntry = archive.file('modrinth.index.json'); if (!indexEntry) throw new Error('This file is not a valid Modrinth Modpack.');
-  const index = JSON.parse(await indexEntry.async('string')); if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.'); const requiredMinecraft = String(index.dependencies?.minecraft || ''); if (requiredMinecraft && !requiredMinecraft.includes(normalized)) throw new Error(`This pack requires Minecraft ${requiredMinecraft}, but the selected instance is ${normalized}.`);
-  const instanceId = modpackInstanceId(normalized, index.name || path.basename(source, '.mrpack')); const targetRoot = modpackInstanceRoot(instanceId); ensureDir(targetRoot); const installed = []; const skipped = []; const baseInstance = await ensureInstance(normalized); const baseRequiredMods = modsRoot(normalized); for (const requiredName of mandatoryModNames(normalized)) { const requiredPath = path.join(baseRequiredMods, requiredName); if (exists(requiredPath)) { ensureDir(path.join(targetRoot, 'mods')); fs.copyFileSync(requiredPath, path.join(targetRoot, 'mods', requiredName)); } }
+  const selectedVersion = sanitizeVersion(version);
+  const source = path.resolve(filePath);
+  if (!fs.existsSync(source) || path.extname(source).toLowerCase() !== '.mrpack') throw new Error('Please choose a valid .mrpack file.');
+  const archive = await JSZip.loadAsync(fs.readFileSync(source));
+  const indexEntry = archive.file('modrinth.index.json');
+  if (!indexEntry) throw new Error('This file is not a valid Modrinth Modpack.');
+  const index = JSON.parse(await indexEntry.async('string'));
+  if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.');
+  const metadataVersion = String(index.dependencies?.minecraft || '').trim().replace(/^v/i, '');
+  const normalized = sanitizeVersion(metadataVersion) || (selectedVersion ? registerMinecraftVersion(selectedVersion) : null);
+  if (!normalized) throw new Error(`The pack does not contain a valid Minecraft release version${selectedVersion ? ` and the selected version is ${selectedVersion}` : ''}.`);
+  registerMinecraftVersion(normalized);
+  const instanceId = modpackInstanceId(normalized, index.name || path.basename(source, '.mrpack'));
+  const targetRoot = modpackInstanceRoot(instanceId);
+  ensureDir(targetRoot);
+  const installed = [];
+  const skipped = [];
+  await ensureInstance(normalized);
+  const baseRequiredMods = modsRoot(normalized);
+  for (const requiredName of mandatoryModNames(normalized)) {
+    const requiredPath = path.join(baseRequiredMods, requiredName);
+    if (exists(requiredPath)) { ensureDir(path.join(targetRoot, 'mods')); fs.copyFileSync(requiredPath, path.join(targetRoot, 'mods', requiredName)); }
+  }
   for (const entry of Array.isArray(index.files) ? index.files : []) {
     const safePath = modpackArchiveSafePath(entry.path); if (!safePath || !Array.isArray(entry.downloads) || !entry.downloads[0]) { skipped.push(entry.path || 'unknown'); continue; }
     const buffer = await fetchVerifiedBuffer(entry.downloads[0], entry.hashes?.sha512); const target = path.join(targetRoot, safePath); ensureDir(path.dirname(target)); fs.writeFileSync(target, buffer); installed.push(safePath);

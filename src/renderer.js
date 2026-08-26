@@ -169,8 +169,31 @@ async function removeServer(id) { const server = (launcherState?.servers || []).
 function modScopeLabel() { const scope = $('modScope'); if (scope) scope.textContent = `for ${selectedVersion}`; const packScope = $('resourcePackScope'); if (packScope) packScope.textContent = `for ${selectedVersion}`; }
 async function updateBuildVersion() { const label = $('buildVersion'); if (!label) return; try { const version = await window.vortex.getAppVersion(); label.textContent = `BUILD ${version}`; } catch (_) { label.textContent = 'BUILD —'; } }
 
-function renderVersions() { const select = $('versionSelect'); const options = launcherState.versions.map(item => `<option value="${item.version}">${item.version} · Fabric + Vortex Client</option>`).join(''); select.innerHTML = options; select.value = selectedVersion; select.onchange = async event => { selectedVersion = event.target.value; await window.vortex.selectVersion(selectedVersion); updatePlaySummary(); renderInstanceCards(); modScopeLabel(); await refreshInstalled(); await renderOverview(); }; }
-function renderInstanceCards() { $('instancesGrid').innerHTML = launcherState.versions.map(instance => { const active = instance.version === selectedVersion ? ' selected' : ''; const state = instance.ready && instance.fabricInstalled ? 'Protected' : 'Auto-repairing'; return `<article class="instance-card${active}"><div class="instance-title"><div><h3>${instance.version}</h3><p>FABRIC + VORTEX CLIENT</p></div><span class="instance-state">${state}</span></div><div class="instance-stats"><div class="instance-stat"><span>REQUIRED MODS</span><strong>${instance.coreModCount}</strong></div><div class="instance-stat"><span>TOTAL</span><strong>${instance.totalModCount} Mods</strong></div></div><div class="instance-actions"><button class="button secondary" data-select="${instance.version}">Select</button><button class="button secondary" data-instance-folder="${instance.version}">Instance folder</button><button class="button ghost" data-mods="${instance.version}">Mods</button></div></article>`; }).join(''); document.querySelectorAll('[data-select]').forEach(button => button.onclick = async () => { selectedVersion = button.dataset.select; await window.vortex.selectVersion(selectedVersion); $('versionSelect').value = selectedVersion; updatePlaySummary(); renderInstanceCards(); modScopeLabel(); await refreshInstalled(); await renderOverview(); showPage('play'); }); document.querySelectorAll('[data-instance-folder]').forEach(button => button.onclick = () => window.vortex.openInstanceFolder(button.dataset.instanceFolder)); document.querySelectorAll('[data-mods]').forEach(button => button.onclick = () => window.vortex.openModsFolder(button.dataset.mods)); }
+async function applyVersionChoice(value) {
+  const normalized = String(value || '').trim();
+  const result = await window.vortex.selectVersion(normalized);
+  if (!result?.ok) { addLog(result?.error || 'Minecraft version could not be selected.', 'error'); return false; }
+  selectedVersion = result.state.selectedVersion;
+  if (result.versions) launcherState.versions = result.versions;
+  $('versionSelect').value = selectedVersion;
+  $('versionInput').value = '';
+  updatePlaySummary(); renderInstanceCards(); modScopeLabel();
+  await refreshInstalled(); await renderOverview();
+  addLog(`Minecraft ${selectedVersion} selected. Fabric will be provisioned on first launch.`, 'success');
+  return true;
+}
+function renderVersions() {
+  const select = $('versionSelect');
+  const input = $('versionInput');
+  const useButton = $('useVersionBtn');
+  const options = launcherState.versions.map(item => `<option value="${escapeAttr(item.version)}">${escapeHtml(item.version)} · ${item.coreModCount ? 'Fabric + Vortex Client' : 'Fabric · vanilla-compatible'}</option>`).join('');
+  select.innerHTML = options; select.value = selectedVersion;
+  select.onchange = () => void applyVersionChoice(select.value);
+  const submit = () => void applyVersionChoice(input.value);
+  if (useButton) useButton.onclick = submit;
+  if (input) input.onkeydown = event => { if (event.key === 'Enter') submit(); };
+}
+function renderInstanceCards() { $('instancesGrid').innerHTML = launcherState.versions.map(instance => { const active = instance.version === selectedVersion ? ' selected' : ''; const state = instance.coreModCount ? (instance.ready && instance.fabricInstalled ? 'Vortex ready' : 'Auto-repairing') : (instance.fabricInstalled ? 'Vanilla + Fabric' : 'Not provisioned'); return `<article class="instance-card${active}"><div class="instance-title"><div><h3>${instance.version}</h3><p>${instance.coreModCount ? 'FABRIC + VORTEX CLIENT' : 'FABRIC · VANILLA-COMPATIBLE'}</p></div><span class="instance-state">${state}</span></div><div class="instance-stats"><div class="instance-stat"><span>REQUIRED MODS</span><strong>${instance.coreModCount}</strong></div><div class="instance-stat"><span>TOTAL</span><strong>${instance.totalModCount} Mods</strong></div></div><div class="instance-actions"><button class="button secondary" data-select="${instance.version}">Select</button><button class="button secondary" data-instance-folder="${instance.version}">Instance folder</button><button class="button ghost" data-mods="${instance.version}">Mods</button></div></article>`; }).join(''); document.querySelectorAll('[data-select]').forEach(button => button.onclick = async () => { selectedVersion = button.dataset.select; await window.vortex.selectVersion(selectedVersion); $('versionSelect').value = selectedVersion; updatePlaySummary(); renderInstanceCards(); modScopeLabel(); await refreshInstalled(); await renderOverview(); showPage('play'); }); document.querySelectorAll('[data-instance-folder]').forEach(button => button.onclick = () => window.vortex.openInstanceFolder(button.dataset.instanceFolder)); document.querySelectorAll('[data-mods]').forEach(button => button.onclick = () => window.vortex.openModsFolder(button.dataset.mods)); }
 function updateCosmetics() {
   const hatPreviewPaths = { none: '../assets/cosmetics/previews/hat-none.png', 'vortex-cap': '../assets/cosmetics/previews/hat-vortex-cap.png', 'neon-halo': '../assets/cosmetics/previews/hat-neon-halo.png', 'void-crown': '../assets/cosmetics/previews/hat-void-crown.png', 'cyber-headphones': '../assets/cosmetics/previews/hat-cyber-headphones.png', 'slime-antenna': '../assets/cosmetics/previews/hat-slime-antenna.png' };
   const capePreviewPaths = { none: '../assets/cosmetics/previews/cape-none.png', 'vortex-crest': '../assets/cosmetics/previews/cape-vortex-crest.png', 'nebula-mark': '../assets/cosmetics/previews/cape-nebula-mark.png', 'void-rune': '../assets/cosmetics/previews/cape-void-rune.png' };
