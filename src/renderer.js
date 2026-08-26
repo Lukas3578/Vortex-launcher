@@ -358,3 +358,17 @@ addLog('Vortex Client Launcher 0.9.54 ready.'); refresh();
     if (event.key === 'Escape' && !overlay.hidden) closePalette();
   });
 })();
+
+
+// Window controls: F11 toggles native fullscreen, Escape exits it.
+(() => {
+  const syncFullscreenClass = async () => {
+    const fullscreen = await window.vortex.isFullscreen();
+    document.body.classList.toggle('is-fullscreen', fullscreen);
+  };
+  document.addEventListener('keydown', async event => {
+    if (event.key === 'F11') { event.preventDefault(); await window.vortex.toggleFullscreen(); await syncFullscreenClass(); }
+    if (event.key === 'Escape' && document.body.classList.contains('is-fullscreen')) { event.preventDefault(); await window.vortex.toggleFullscreen(); await syncFullscreenClass(); }
+  });
+  void syncFullscreenClass();
+})();

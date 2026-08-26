@@ -56,6 +56,8 @@ contextBridge.exposeInMainWorld('vortex', {
   removeAccount: (id) => ipcRenderer.invoke('remove-account', id),
   logout: () => ipcRenderer.invoke('logout'),
   launch: (version, serverId = null) => ipcRenderer.invoke('launch', version, serverId),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  isFullscreen: () => ipcRenderer.invoke('is-fullscreen'),
   onStatus: (callback) => ipcRenderer.on('status', (_event, value) => callback(value)),
   onLog: (callback) => ipcRenderer.on('log', (_event, value) => callback(value)),
   onProgress: (callback) => ipcRenderer.on('progress', (_event, value) => callback(value)),

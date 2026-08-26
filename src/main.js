@@ -1535,6 +1535,8 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('toggle-fullscreen', () => { if (!mainWindow) return false; const next = !mainWindow.isFullScreen(); mainWindow.setFullScreen(next); return next; });
+ipcMain.handle('is-fullscreen', () => Boolean(mainWindow?.isFullScreen()));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
 ipcMain.handle('get-bedrock-state', () => getBedrockState());
 ipcMain.handle('launch-bedrock', () => launchBedrock());
