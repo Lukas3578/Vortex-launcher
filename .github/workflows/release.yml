@@ -39,6 +39,8 @@ jobs:
           - Automatische Erkennung und erneute Anmeldung bei ungültigen Minecraft-Sitzungen.
           - Vortex Client Mod für Minecraft 1.21.11 auf Version 2.28.2 aktualisiert.
           - Die gebündelte Datei vortexclient-2.28.2.jar ersetzt die vorherige Mod-Version.
+          - Das Vortex Plus Addon für Minecraft 1.21.11 wurde durch die bereitgestellte neue Fassung ersetzt.
+          - Die Datei vortex-plus-addon-1.0.0.jar ist im 1.21.11-Modpack aktualisiert.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
           - Klare Trennung zwischen normalem Launcher und Sandbox-Experimenten.
 
