@@ -61,6 +61,9 @@ jobs:
           - Bestehende Modrinth .mrpack-Dateien können sicher in die gewählte Fabric-Instanz importiert werden.
           - Die aktuelle Instanz kann als Modrinth-kompatible .mrpack-Datei exportiert werden.
           - Neue Übersicht für installierte Modpacks mit Minecraft-Version, Dateianzahl, Installationsdatum und Öffnen-Aktion.
+          - Jedes Modpack wird in einem eigenen separaten Instance-Ordner installiert und kann direkt mit Play gestartet werden.
+          - Eigene MRPACK-Dateien können aus dem Launcher in die Vortex Community veröffentlicht werden.
+          - Öffentliche Community-Modpacks können angezeigt, heruntergeladen und in einer eigenen Instanz installiert werden.
           - Modpack-Installationen werden dauerhaft gespeichert und beim Import auf die ausgewählte Minecraft-Version geprüft.
           - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
           - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
