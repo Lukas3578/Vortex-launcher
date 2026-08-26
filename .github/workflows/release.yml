@@ -31,9 +31,11 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Aktualisiert
-          - Der integrierte **VortexClient Fabric** für Minecraft 26.2 wurde auf Version **2.28.17+26.2** aktualisiert.
-          - Die bisherige Version 2.28.14+26.2 wird dadurch im 26.2-Modpack ersetzt.
+          ### Verbesserte Instanzauswahl
+          - Die Auswahl der aktiven Minecraft-Instanz wurde vollständig überarbeitet und klarer gegliedert.
+          - Die gespeicherte Version ist jetzt als primäre Auswahl hervorgehoben; andere Releases können separat und gezielt gestartet werden.
+          - Neue Feldbeschriftungen, ein kompakter Hilfetext und ein sichtbarer Fabric-/Vortex-Status erleichtern die Orientierung.
+          - Fokus-, Hover- und Statuszustände wurden für eine ruhigere, hochwertigere Bedienung verfeinert.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
@@ -41,7 +43,7 @@ jobs:
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
 
           ### Hinweis
-          Dieses Update stellt sicher, dass neue 26.2-Instanzen die aktuelle VortexClient-Modversion enthalten.
+          Die Versionsauswahl, manuelle Eingabe und der Instanzstatus funktionieren weiterhin wie bisher.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
