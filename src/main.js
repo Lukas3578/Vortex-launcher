@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.62',
+    title: 'Focused Launcher Navigation',
+    summary: 'A cleaner launcher with only the workflows you actually need.',
+    items: [
+      'Removed the F11 fullscreen label from the header while keeping F11 and Escape fully functional.',
+      'Removed AI Studio and Community Skins completely from the visible launcher navigation.',
+      'Removed the old 3D Cosmetics status row from every instance card.',
+      'Resource Pack search cards now use the same Modrinth artwork presentation as Mod Installer cards.'
+    ]
+  },
+  {
     version: '0.9.61',
     title: 'Vortex 2.0 Motion Pass',
     summary: 'A deeper visual pass brings richer motion and more polished detail to every category.',
