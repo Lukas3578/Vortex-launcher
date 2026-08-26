@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.61',
+    title: 'Vortex 2.0 Motion Pass',
+    summary: 'A deeper visual pass brings richer motion and more polished detail to every category.',
+    items: [
+      'Server and Bedrock heroes now have layered lighting, sweep effects and responsive hover depth.',
+      'Instances, mods, resource packs and community cards animate in with clearer hierarchy and staggered timing.',
+      'AI Studio, Cosmetics, Accounts and activity panels receive richer focus states, glow and tactile feedback.',
+      'Global card spotlights, smoother scrolling, responsive refinements and keyboard-friendly controls are included.'
+    ]
+  },
+  {
     version: '0.9.60',
     title: 'Vortex 2.0 Experience',
     summary: 'Every launcher category now feels more consistent, responsive and alive.',

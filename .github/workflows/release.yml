@@ -45,6 +45,9 @@ jobs:
           - Alle Launcher-Kategorien erhalten ein einheitliches Vortex-2.0-Design mit verbesserten Karten, Suchbereichen, Statusanzeigen und Empty-States.
           - Neue Karten-Lichtreflexe, gestaffelte Ladeanimationen, Focus-Ringe und sanftes Scrollen verbessern die Navigation.
           - Enter startet Suchen direkt; Ctrl + Shift + R lädt den Launcher global neu.
+          - Zweite Designrunde mit individuellen Motion-Details für Server, Bedrock, Instanzen, Mods, Packs, AI Studio, Community und Cosmetics.
+          - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
+          - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
           - Klare Trennung zwischen normalem Launcher und Sandbox-Experimenten.
 
