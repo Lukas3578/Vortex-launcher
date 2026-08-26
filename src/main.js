@@ -1842,6 +1842,24 @@ ipcMain.handle('export-mrpack', async (_event, version, metadata) => { try { ret
 
 ipcMain.handle('list-installed-modpacks', () => loadInstalledModpacks().map(item => ({ ...item, exists: fs.existsSync(item.instancePath || modpackInstanceRoot(item.instanceId || item.id)) })));
 ipcMain.handle('open-modpack-folder', (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; const folder = pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id); ensureDir(folder); return shell.openPath(folder); });
+ipcMain.handle('delete-installed-modpack', (_event, instanceId) => {
+  const id = String(instanceId || '');
+  if (!/^[a-z0-9][a-z0-9._-]{0,119}$/i.test(id)) return { ok: false, error: 'Invalid modpack identifier.' };
+  const packs = loadInstalledModpacks();
+  const pack = packs.find(item => item.id === id);
+  if (!pack) return { ok: false, error: 'The modpack was not found.' };
+  const root = path.resolve(path.join(instancesRoot, 'modpacks'));
+  const folder = path.resolve(pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id));
+  if (!folder.startsWith(`${root}${path.sep}`)) return { ok: false, error: 'This modpack location is outside the managed instances directory.' };
+  try {
+    fs.rmSync(folder, { recursive: true, force: true, maxRetries: 2, retryDelay: 150 });
+    saveInstalledModpacks(packs.filter(item => item.id !== id));
+    send('status', { type: 'success', message: `${pack.name} was removed from installed modpacks.` });
+    return { ok: true, id };
+  } catch (error) {
+    return { ok: false, error: `Could not remove the modpack: ${error.message}` };
+  }
+});
 ipcMain.handle('launch-modpack', async (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; try { const parallel = [...minecraftProcesses.values()].some(entry => entry.kind === 'primary'); const result = await startMinecraftSession({ accountValue: account, version: pack.targetVersion, server: null, parallel, gameDirectoryOverride: pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id) }); send('status', { type: 'success', message: `${pack.name} is launching in its own instance.` }); return { ok: true, ...result, modpack: pack.name }; } catch (error) { send('status', { type: 'error', message: `Modpack launch failed: ${error.message}` }); return { ok: false, error: error.message }; } });
 
 async function listCommunityModpacks() { const packs = await communityFetch('/api/modpacks'); return Array.isArray(packs) ? packs : []; }

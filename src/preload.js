@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('vortex', {
   listInstalledModpacks: () => ipcRenderer.invoke('list-installed-modpacks'),
   launchModpack: (instanceId) => ipcRenderer.invoke('launch-modpack', instanceId),
   openModpackFolder: (instanceId) => ipcRenderer.invoke('open-modpack-folder', instanceId),
+  deleteInstalledModpack: (instanceId) => ipcRenderer.invoke('delete-installed-modpack', instanceId),
   listCommunityModpacks: () => ipcRenderer.invoke('community-list-modpacks'),
   downloadCommunityModpack: (shareCode, version) => ipcRenderer.invoke('community-download-modpack', shareCode, version),
   publishCommunityModpack: (metadata) => ipcRenderer.invoke('community-upload-modpack', metadata),
