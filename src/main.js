@@ -980,6 +980,19 @@ async function signInToMinecraft() {
   const signedIn = saveAccount({ username: profile.name || 'Minecraft player', uuid: profile.id || '', auth: token.mclc(true) });
   return signedIn;
 }
+async function validateMinecraftAccessToken(auth) {
+  if (!auth?.access_token) return false;
+  try {
+    const response = await fetch('https://api.minecraftservices.com/minecraft/profile', {
+      headers: { Authorization: `Bearer ${auth.access_token}` }
+    });
+    // Only a definitive 401 means the token is invalid. Temporary service errors
+    // should not prevent the user from starting Minecraft.
+    return response.status !== 401;
+  } catch {
+    return true;
+  }
+}
 async function refreshMinecraftAuthorization(savedAccount) {
   const previous = savedAccount?.auth;
   const refreshToken = previous?.meta?.refresh;
@@ -995,6 +1008,10 @@ async function refreshMinecraftAuthorization(savedAccount) {
     if (!refreshedAuth?.access_token || !refreshedAuth?.meta?.refresh || !profile?.id) throw new Error('The refreshed Minecraft session is incomplete.');
     const refreshedAccount = { ...savedAccount, username: profile.name || savedAccount.username, uuid: profile.id || savedAccount.uuid, auth: refreshedAuth };
     updateAccountSession(refreshedAccount);
+    if (!(await validateMinecraftAccessToken(refreshedAuth))) {
+      send('status', { type: 'info', message: 'The saved Minecraft session is invalid. Please sign in again …' });
+      return (await signInToMinecraft()).auth;
+    }
     return refreshedAuth;
   } catch (error) {
     throw new Error(`Minecraft session refresh failed. Sign in again to continue. (${error.message || error})`);
