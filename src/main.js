@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.55',
+    title: 'Photon Launcher Experience',
+    summary: 'A faster, smoother and more focused Vortex launcher experience with a refreshed visual system and instant command control.',
+    items: [
+      'Introduces the Photon visual redesign with glass surfaces, richer depth, improved hierarchy and responsive layouts.',
+      'Adds smooth page transitions, hover motion, ambient hero animation and reduced-motion accessibility support.',
+      'Adds Quick Actions with Ctrl + K for instant launch, navigation, mod management and folder access.',
+      'Keeps all existing Minecraft, server, mod, resource pack, AI Studio and Community workflows intact.'
+    ]
+  },
+  {
     version: '0.9.54',
     title: 'Skin Studio Heading Cleanup',
     summary: 'The requested Skin Studio heading was removed, leaving a cleaner compact editor header without changing any tool or skin workflow.',

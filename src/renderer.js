@@ -313,3 +313,48 @@ async function createCosmeticSkinByUsername() { const input = $('skinUsername');
 addCosmeticPreviewFallbacks(); $('playBtn').onclick = launch; $('copyLog').onclick = async () => { const text = [...logEl.children].map(line => line.textContent.replace(/\s+/g, ' ').trim()).join('\n'); try { await navigator.clipboard.writeText(text); setStatus('System log copied.'); } catch (_) { setStatus('Could not copy system log.'); } }; $('openLaunchLogBtn').onclick = async () => { const result = await window.vortex.openLaunchLog(); if (!result.ok) addLog(result.error || 'Launch log is still empty.', 'error'); }; $('openCrashLogBtn').onclick = async () => { const result = await window.vortex.openCrashLog(); if (!result.ok) addLog(result.error || 'Crash log is still empty.', 'error'); }; $('aiProvider').onchange = event => updateAiProviderControls(event.target.value); $('openInstancesBtn').onclick = () => window.vortex.openInstanceFolder(selectedVersion); $('launchBedrockBtn').onclick = startBedrock; $('refreshBedrockBtn').onclick = refreshBedrock; $('joinOfficialServerBtn').onclick = () => joinServer('official-vortexpvp'); $('joinOfficialServerHeroBtn').onclick = () => joinServer('official-vortexpvp'); $('addServerBtn').onclick = addServer; $('openModsBtn').onclick = () => window.vortex.openModsFolder(selectedVersion); $('openInstanceBtn').onclick = () => window.vortex.openInstanceFolder(selectedVersion); $('clearLog').onclick = () => { logEl.innerHTML = ''; };  document.querySelectorAll('.nav-link').forEach(button => button.onclick = () => showPage(button.dataset.page)); document.querySelectorAll('[data-page-target]').forEach(button => button.onclick = () => showPage(button.dataset.pageTarget));   $('modSearchBtn').onclick = searchTemplateMods; $('modQuery').onkeydown = event => { if (event.key === 'Enter') searchTemplateMods(); }; $('toggleInstalled').onclick = () => { installedCollapsed = !installedCollapsed; $('toggleInstalled').textContent = installedCollapsed ? 'Expand' : 'Collapse'; refreshInstalled(); }; $('resourcePackSearchBtn').onclick = searchTemplateResourcePacks; $('resourcePackQuery').onkeydown = event => { if (event.key === 'Enter') searchTemplateResourcePacks(); }; $('toggleInstalledPacks').onclick = () => { installedPacksCollapsed = !installedPacksCollapsed; $('toggleInstalledPacks').textContent = installedPacksCollapsed ? 'Expand' : 'Collapse'; refreshInstalledPacks(); };  $('communityLoginBtn').onclick = openCommunityLogin; $('communityUploadBtn').onclick = uploadCommunityPreset; $('refreshCommunityBtn').onclick = renderCommunity; $('refreshCommunitySkinsBtn').onclick = renderCommunity; $('sidebarUpdate').onclick = () => showUpdatePopup(launcherState?.update); $('updateActionBtn').onclick = runUpdateAction; $('updateLaterBtn').onclick = () => { deferredUpdateVersion = launcherState?.update?.availableVersion || null; $('updateModal').hidden = true; }; $('closeNewsBtn').onclick = closeReleaseNews; $('saveAiKeyBtn').onclick = saveAiKey; $('removeAiKeyBtn').onclick = removeAiKey;  $('generateAiCapeBtn').onclick = () => createAiAsset('cape'); $('generateAiModBtn').onclick = () => createAiAsset('mod');  $('openAiCapesBtn').onclick = () => window.vortex.openAiOutput('capes'); $('openAiModsBtn').onclick = () => window.vortex.openAiOutput('mods');
 window.vortex.onStatus(({ type, message }) => { setStatus(message); addLog(message, type); if (type === 'success' && message.includes('started')) { $('playBtn').disabled = false; $('playLabel').textContent = 'Launch Vortex'; } }); window.vortex.onLog(message => addLog(message)); window.vortex.onProgress(data => { if (data?.type) setStatus(`Loading ${data.type} …`); }); window.vortex.onInstanceMaintenance(async maintenance => { if (!launcherState) return; launcherState.maintenance = maintenance; launcherState.versions = await Promise.all(launcherState.versions.map(instance => window.vortex.getInstanceSummary(instance.version))); updatePlaySummary(); renderInstanceCards(); }); window.vortex.onCommunityState(state => { if (!launcherState) return; launcherState.community = state; updateCommunityView(state); renderCommunity(); }); window.vortex.onUpdateState(update => { if (launcherState) launcherState.update = update; updateUpdateView(update); });
 addLog('Vortex Client Launcher 0.9.54 ready.'); refresh();
+
+
+// Photon UX: global command palette for fast launcher control.
+(() => {
+  const overlay = document.getElementById('commandOverlay');
+  const input = document.getElementById('commandSearch');
+  const close = document.getElementById('closeCommandBtn');
+  const list = document.getElementById('commandList');
+  if (!overlay || !input || !list) return;
+  let focusedIndex = 0;
+  const items = () => [...list.querySelectorAll('.command-item:not([hidden])')];
+  const focusItem = index => {
+    const available = items();
+    if (!available.length) return;
+    focusedIndex = (index + available.length) % available.length;
+    available.forEach((item, i) => item.classList.toggle('command-focused', i === focusedIndex));
+  };
+  const closePalette = () => { overlay.hidden = true; input.value = ''; list.querySelectorAll('.command-item').forEach(item => { item.hidden = false; item.classList.remove('command-focused'); }); };
+  const openPalette = () => { overlay.hidden = false; input.value = ''; focusItem(0); requestAnimationFrame(() => input.focus()); };
+  const runCommand = command => {
+    closePalette();
+    if (command === 'play') return void launch();
+    if (command === 'openmods') return void window.vortex.openModsFolder(selectedVersion);
+    showPage(command);
+  };
+  list.querySelectorAll('.command-item').forEach(item => item.addEventListener('click', () => runCommand(item.dataset.command)));
+  input.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    list.querySelectorAll('.command-item').forEach(item => { item.hidden = query && !item.textContent.toLowerCase().includes(query); });
+    focusItem(0);
+  });
+  input.addEventListener('keydown', event => {
+    const available = items();
+    if (event.key === 'ArrowDown') { event.preventDefault(); focusItem(focusedIndex + 1); }
+    if (event.key === 'ArrowUp') { event.preventDefault(); focusItem(focusedIndex - 1); }
+    if (event.key === 'Enter' && available[focusedIndex]) { event.preventDefault(); runCommand(available[focusedIndex].dataset.command); }
+    if (event.key === 'Escape') closePalette();
+  });
+  close?.addEventListener('click', closePalette);
+  overlay.addEventListener('click', event => { if (event.target === overlay) closePalette(); });
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openPalette(); }
+    if (event.key === 'Escape' && !overlay.hidden) closePalette();
+  });
+})();

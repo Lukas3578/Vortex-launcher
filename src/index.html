@@ -63,8 +63,22 @@
 
       <section class="page" id="resource-packs"><div class="page-heading"><p class="eyebrow">MODRINTH</p><h2>Resource Pack Installer</h2><p>Type a pack name. The build that matches your selected Minecraft version is picked automatically and saved directly into this instance.</p></div><div class="mod-search-bar"><input type="text" id="resourcePackQuery" placeholder="e.g. faithful, bare bones, vanilla" autocomplete="off" /><button class="button" id="resourcePackSearchBtn">Search</button><span class="mod-scope" id="resourcePackScope">for —</span></div><div id="resourcePackResults" class="mod-results"></div><section class="installed-block"><div class="section-title"><h3>In This Instance</h3><button class="text-button" id="toggleInstalledPacks">Collapse</button></div><div id="installedPacks" class="installed-list"></div></section></section>
 
-      <footer><span>VORTEX CLIENT 0.9.54</span><span id="statusText">Launcher ready</span></footer>
+      <footer><span>VORTEX CLIENT 0.9.55 · PHOTON</span><span id="statusText">Launcher ready</span></footer>
     </main>
+  </div>
+  <div class="command-overlay" id="commandOverlay" hidden>
+    <section class="command-palette" role="dialog" aria-modal="true" aria-labelledby="commandTitle">
+      <div class="command-head"><div><p class="eyebrow">VORTEX QUICK ACTIONS</p><h2 id="commandTitle">What do you want to do?</h2></div><button class="icon-button" id="closeCommandBtn" aria-label="Close">×</button></div>
+      <input id="commandSearch" class="command-search" placeholder="Search pages and actions…" autocomplete="off" />
+      <div class="command-list" id="commandList">
+        <button class="command-item" data-command="play"><span class="command-icon">▶</span><span><strong>Launch Vortex</strong><small>Start your selected Fabric instance</small></span><kbd>Enter</kbd></button>
+        <button class="command-item" data-command="servers"><span class="command-icon">◌</span><span><strong>Browse Servers</strong><small>Open your multiplayer library</small></span><kbd>S</kbd></button>
+        <button class="command-item" data-command="mods"><span class="command-icon">✦</span><span><strong>Install a Mod</strong><small>Search compatible Modrinth projects</small></span><kbd>M</kbd></button>
+        <button class="command-item" data-command="instances"><span class="command-icon">▦</span><span><strong>Manage Instances</strong><small>Open isolated version profiles</small></span><kbd>I</kbd></button>
+        <button class="command-item" data-command="openmods"><span class="command-icon">⌁</span><span><strong>Open Mods Folder</strong><small>Jump directly to the active instance</small></span><kbd>O</kbd></button>
+      </div>
+      <div class="command-foot"><span>Navigate with ↑ ↓</span><span><kbd>Esc</kbd> close</span></div>
+    </section>
   </div>
   <div class="news-modal" id="newsModal" hidden role="dialog" aria-modal="true" aria-labelledby="newsModalTitle">
     <div class="news-modal-card">
