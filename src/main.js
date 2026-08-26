@@ -381,12 +381,17 @@ const RELEASE_NEWS = [
   }
 ];
 
-const JAVA_25_DOWNLOAD_URL = 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jdk/hotspot/normal/eclipse';
+const JAVA_RUNTIME_DOWNLOAD_URLS = Object.freeze({
+  8: 'https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jre/hotspot/normal/eclipse',
+  17: 'https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse',
+  21: 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse',
+  25: 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jre/hotspot/normal/eclipse'
+});
+const javaRuntimeInstallPromises = new Map();
 const BEDROCK_PACKAGE_NAME = 'Microsoft.MinecraftUWP';
 const BEDROCK_URI = 'minecraft://';
 
 function assetsRoot() { return path.join(app.getAppPath(), 'assets'); }
-function javaRuntimeRoot() { return path.join(dataRoot, 'runtime', 'java-25'); }
 function windowsPowerShellPath() { return path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'); }
 async function getBedrockState() {
   if (process.platform !== 'win32') return { supported: false, installed: false, message: 'Minecraft Bedrock can only be started by Vortex on Windows.' };
@@ -415,10 +420,22 @@ async function launchBedrock() {
   }
 }
 function requiresJava25(version) { return /^26\./.test(String(version || '')); }
+function requiredJavaMajor(version) {
+  const value = String(version || '').trim().replace(/^v/i, '');
+  if (requiresJava25(value)) return 25;
+  const match = value.match(/^1\.(\d+)(?:\.(\d+))?$/);
+  if (!match) return 21;
+  const minor = Number(match[1]);
+  const patch = Number(match[2] || 0);
+  if (minor > 20 || (minor === 20 && patch >= 5)) return 21;
+  if (minor >= 17) return 17;
+  return 8;
+}
 // minecraft-launcher-core first calls the supplied path with `-version`.
 // Therefore Windows must use java.exe rather than the silent javaw.exe.
 function javaExecutable(home) { return path.join(home, 'bin', process.platform === 'win32' ? 'java.exe' : 'java'); }
 function javaConsoleExecutable(home) { return javaExecutable(home); }
+function javaRuntimeRoot(major) { return path.join(dataRoot, 'runtime', `java-${major}`); }
 function localJavaHomes(root) {
   const homes = [];
   if (!root || !exists(root)) return homes;
@@ -436,9 +453,9 @@ async function javaMajorVersion(home) {
     return match ? Number(match[1]) : null;
   } catch (_) { return null; }
 }
-async function findJava25Home() {
+async function findJavaHome(requiredMajor) {
   const roots = [
-    javaRuntimeRoot(),
+    javaRuntimeRoot(requiredMajor),
     process.env.JAVA_HOME || '',
     path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Eclipse Adoptium'),
     path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Java'),
@@ -448,40 +465,48 @@ async function findJava25Home() {
   for (const root of roots) for (const home of localJavaHomes(root)) {
     if (seen.has(home)) continue;
     seen.add(home);
-    if ((await javaMajorVersion(home)) >= 25) return home;
+    if ((await javaMajorVersion(home)) >= requiredMajor) return home;
   }
   return null;
 }
-async function installPortableJava25() {
-  if (process.platform !== 'win32') throw new Error('Minecraft 26.x requires Java 25. Automatic Java provisioning is available in the Windows launcher.');
-  const existing = await findJava25Home();
+async function installPortableJava(requiredMajor) {
+  if (process.platform !== 'win32') throw new Error(`Minecraft requires Java ${requiredMajor}. Automatic Java runtime provisioning is available in the Windows launcher.`);
+  const existing = await findJavaHome(requiredMajor);
   if (existing) return existing;
-  send('status', { type: 'info', message: 'Java 25 is being provisioned for Minecraft 26.x …' });
-  const runtimeRoot = javaRuntimeRoot();
-  const archive = path.join(runtimeRoot, 'java-25.zip');
-  ensureDir(runtimeRoot);
-  const response = await fetch(JAVA_25_DOWNLOAD_URL, { redirect: 'follow', signal: AbortSignal.timeout(300000), headers: { 'User-Agent': MODRINTH_USER_AGENT } });
-  if (!response.ok) throw new Error(`Java 25 could not be downloaded (HTTP ${response.status}). Install Java 25 and restart the launcher.`);
-  const data = Buffer.from(await response.arrayBuffer());
-  if (data.length < 10 * 1024 * 1024 || data.length > 500 * 1024 * 1024) throw new Error('The downloaded Java 25 file is invalid or too large.');
-  fs.writeFileSync(archive, data);
-  try {
-    const powershell = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-    const escapedArchive = archive.replace(/'/g, "''");
-    const escapedRoot = runtimeRoot.replace(/'/g, "''");
-    await execFileAsync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', `Expand-Archive -LiteralPath '${escapedArchive}' -DestinationPath '${escapedRoot}' -Force`], { windowsHide: true, timeout: 180000 });
-  } finally { try { fs.rmSync(archive, { force: true }); } catch (_) {} }
-  const installed = await findJava25Home();
-  if (!installed) throw new Error('Java 25 was extracted but could not be verified. Install Java 25 and restart the launcher.');
-  send('status', { type: 'success', message: 'Java 25 is ready and will be used for Minecraft 26.x.' });
-  return installed;
+  const pending = javaRuntimeInstallPromises.get(requiredMajor);
+  if (pending) return pending;
+  const provision = (async () => {
+    send('status', { type: 'info', message: `Preparing the built-in Java ${requiredMajor} runtime …` });
+    const runtimeRoot = javaRuntimeRoot(requiredMajor);
+    const archive = path.join(runtimeRoot, `java-${requiredMajor}.zip`);
+    const downloadUrl = JAVA_RUNTIME_DOWNLOAD_URLS[requiredMajor];
+    if (!downloadUrl) throw new Error(`No automatic Java runtime is configured for Java ${requiredMajor}.`);
+    ensureDir(runtimeRoot);
+    const response = await fetch(downloadUrl, { redirect: 'follow', signal: AbortSignal.timeout(300000), headers: { 'User-Agent': MODRINTH_USER_AGENT } });
+    if (!response.ok) throw new Error(`The built-in Java runtime could not be downloaded (HTTP ${response.status}). Check your connection and try again.`);
+    const data = Buffer.from(await response.arrayBuffer());
+    if (data.length < 10 * 1024 * 1024 || data.length > 500 * 1024 * 1024) throw new Error('The downloaded Java runtime is invalid or too large.');
+    fs.writeFileSync(archive, data);
+    try {
+      const powershell = windowsPowerShellPath();
+      const escapedArchive = archive.replace(/'/g, "''");
+      const escapedRoot = runtimeRoot.replace(/'/g, "''");
+      await execFileAsync(powershell, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', `Expand-Archive -LiteralPath '${escapedArchive}' -DestinationPath '${escapedRoot}' -Force`], { windowsHide: true, timeout: 180000 });
+    } finally { try { fs.rmSync(archive, { force: true }); } catch (_) {} }
+    const installed = await findJavaHome(requiredMajor);
+    if (!installed) throw new Error('The built-in Java runtime could not be verified after installation. Restart the launcher and try again.');
+    send('status', { type: 'success', message: `Built-in Java ${requiredMajor} is ready for Minecraft.` });
+    return installed;
+  })();
+  javaRuntimeInstallPromises.set(requiredMajor, provision);
+  try { return await provision; } finally { javaRuntimeInstallPromises.delete(requiredMajor); }
 }
 async function javaPathForVersion(version) {
-  if (!requiresJava25(version)) return null;
-  const home = await findJava25Home() || await installPortableJava25();
+  const requiredMajor = requiredJavaMajor(version);
+  const home = await findJavaHome(requiredMajor) || await installPortableJava(requiredMajor);
   const binary = javaExecutable(home);
-  if (!exists(binary)) throw new Error('Java 25 was not found. Restart the launcher or install Java 25.');
-  send('log', `Minecraft ${version} is using Java ${await javaMajorVersion(home) || 25}: ${binary}`);
+  if (!exists(binary)) throw new Error(`Java ${requiredMajor} could not be prepared. Restart the launcher and try again.`);
+  send('log', `Minecraft ${version} is using Java ${await javaMajorVersion(home) || requiredMajor}: ${binary}`);
   return binary;
 }
 function instanceRoot(version) { return path.join(instancesRoot, version); }
