@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.56',
+    title: 'Photon Launcher Experience',
+    summary: 'The Vortex launcher is now smoother, sharper and faster to control.',
+    items: [
+      'Photon redesign with glass surfaces, richer depth, cleaner hierarchy and responsive layouts.',
+      'Smooth page transitions, hover motion, ambient hero animation and reduced-motion accessibility support.',
+      'Quick Actions with Ctrl + K for instant launch, navigation, mod management and folder access.',
+      'Automatic invalid Minecraft session detection with guided Microsoft reauthentication.'
+    ]
+  },
+  {
     version: '0.9.55',
     title: 'Photon Launcher Experience',
     summary: 'A faster, smoother and more focused Vortex launcher experience with a refreshed visual system and instant command control.',

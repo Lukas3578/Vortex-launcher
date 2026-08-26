@@ -33,6 +33,10 @@ jobs:
 
           ### Neu
           - Vortex Client ohne öffentlichen Cosmetics-Bereich.
+          - Photon-Redesign mit moderner Glasmorphism-Oberfläche, besserer Hierarchie und responsivem Layout.
+          - Flüssige Seitenübergänge, Hover-Animationen, Ambient-Glow und Reduced-Motion-Unterstützung.
+          - Neue Quick Actions mit Ctrl + K für Launch, Navigation, Mods, Instanzen und Ordnerzugriff.
+          - Automatische Erkennung und erneute Anmeldung bei ungültigen Minecraft-Sitzungen.
           - Vortex Client Mod für Minecraft 1.21.11 auf Version 2.28.2 aktualisiert.
           - Die gebündelte Datei vortexclient-2.28.2.jar ersetzt die vorherige Mod-Version.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
