@@ -804,19 +804,21 @@ async function downloadResourcePack(gameVersion, requested = {}) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   if (!normalizedVersion || !requested.versionId) throw new Error('Invalid resource pack or Minecraft version.');
   const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
-  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion)) throw new Error('This resource pack is not compatible with the selected Minecraft version.');  const file = selectPrimaryZip(version.files);
-  if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.zip$/i.test(file.filename)) throw new Error('Could not securely determine the resource pack file.');
+  if (!Array.isArray(version.game_versions) || !version.game_versions.includes(normalizedVersion)) throw new Error('This resource pack is not compatible with the selected Minecraft version.');
+  const file = selectPrimaryZip(version.files);
+  const fileName = path.basename(String(file?.filename || ''));
+  if (!file || !/^https:\/\//i.test(file.url) || fileName !== file.filename || !/\.zip$/i.test(fileName) || /[\0\r\n]/.test(fileName)) throw new Error('Could not securely determine the resource pack file.');
   if (file.size > 500 * 1024 * 1024) throw new Error('The resource pack is larger than 500 MB and was rejected for security reasons.');
   const targetDir = resourcePacksRoot(normalizedVersion); ensureDir(targetDir);
-  const target = path.join(targetDir, file.filename);
-  if (exists(target)) throw new Error(`The file ${file.filename} already exists in this instance.`);
+  const target = path.join(targetDir, fileName);
+  if (exists(target)) throw new Error(`The file ${fileName} already exists in this instance.`);
   const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(180000) });
   if (!response.ok) throw new Error(`Resource pack download failed (${response.status}).`);
   const buffer = Buffer.from(await response.arrayBuffer());
   if (buffer.length > 500 * 1024 * 1024) throw new Error('The downloaded resource pack is larger than 500 MB.');
   if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The resource pack checksum does not match.'); }
   fs.writeFileSync(target, buffer);
-  return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
+  return { ok: true, fileName, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
 }
 async function downloadModrinthMod(gameVersion, requested = {}) {
   const normalizedVersion = validModrinthVersion(gameVersion);
