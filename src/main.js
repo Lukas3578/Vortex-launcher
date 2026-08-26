@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.64',
+    title: 'Launcher Stability Update',
+    summary: 'Fixed startup rendering, restored Community and made fullscreen controls reliable.',
+    items: [
+      'The Community section is visible again and now contains presets and macros only.',
+      'F11 and Escape are handled directly by the Electron window for reliable fullscreen control.',
+      'The footer now shows the actual installed launcher version dynamically.',
+      'Removed AI-button lookups and stale containers that could stop all category content from loading.'
+    ]
+  },
+  {
     version: '0.9.63',
     title: 'Loading Restored',
     summary: 'The launcher content pipeline is working again across every category.',
@@ -1571,6 +1582,18 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({ width: 1380, height: 880, minWidth: 1080, minHeight: 720, backgroundColor: '#060914', title: 'Vortex Client', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    if (input.key === 'F11') {
+      event.preventDefault();
+      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+      return;
+    }
+    if (input.key === 'Escape' && mainWindow.isFullScreen()) {
+      event.preventDefault();
+      mainWindow.setFullScreen(false);
+    }
+  });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
 }
 
@@ -1589,6 +1612,7 @@ app.on('before-quit', () => {
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
+ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: SUPPORTED_VERSIONS.map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
 ipcMain.handle('toggle-fullscreen', () => { if (!mainWindow) return false; const next = !mainWindow.isFullScreen(); mainWindow.setFullScreen(next); return next; });
 ipcMain.handle('is-fullscreen', () => Boolean(mainWindow?.isFullScreen()));

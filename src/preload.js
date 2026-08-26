@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('vortex', {
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getState: () => ipcRenderer.invoke('get-state'),
   listServers: () => ipcRenderer.invoke('list-servers'),
   getBedrockState: () => ipcRenderer.invoke('get-bedrock-state'),
