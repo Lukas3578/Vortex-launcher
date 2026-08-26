@@ -637,6 +637,13 @@ const MODRINTH_UNUSABLE_STATUSES = new Set(['archived', 'draft', 'scheduled', 'u
 const MODRINTH_CHANNELS = ['release', 'beta', 'alpha'];
 function installedProjectsFile(version) { return path.join(instanceRoot(version), 'vortex-installed-projects.json'); }
 function installedProjectMap(version) { return loadJson(installedProjectsFile(version), {}); }
+function modSourcesFile(version) { return path.join(instanceRoot(version), 'vortex-mod-sources.json'); }
+function modSourceMap(version) { const value = loadJson(modSourcesFile(version), {}); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+function normalizedModFileName(fileName) { return path.basename(String(fileName || '')).replace(/\.disabled$/i, ''); }
+function sourceLabelFor(source, fallback = 'Local file') { return ({ modrinth: 'Modrinth', 'modrinth-profile': 'Modrinth profile', external: 'External file', vortex: 'Vortex managed' })[String(source || '')] || fallback; }
+function modSourceForFile(version, fileName) { return modSourceMap(version)[normalizedModFileName(fileName)] || null; }
+function setModSource(version, fileName, source, details = {}) { const file = normalizedModFileName(fileName); if (!/^\S+\.jar$/i.test(file)) return; const sources = modSourceMap(version); sources[file] = { source: String(source || 'external'), label: String(details.label || sourceLabelFor(source)), profileName: String(details.profileName || '').slice(0, 80), importedAt: new Date().toISOString() }; writeJson(modSourcesFile(version), sources); }
+function removeModSourceForFile(version, fileName) { const sources = modSourceMap(version); const file = normalizedModFileName(fileName); if (Object.prototype.hasOwnProperty.call(sources, file)) { delete sources[file]; writeJson(modSourcesFile(version), sources); } }
 function projectRecordFileName(record) { return typeof record === 'string' ? record : String(record?.fileName || ''); }
 function isProjectInstalled(version, projectId) { return Boolean(installedProjectMap(version)[projectId]); }
 const projectMetadataCache = new Map();
@@ -660,6 +667,7 @@ function mappedProjectForFile(version, fileName) {
   return null;
 }
 function removeProjectMappingForFile(version, fileName) {
+  removeModSourceForFile(version, fileName);
   const projects = installedProjectMap(version);
   const baseName = String(fileName || '').replace(/\.disabled$/i, '');
   let changed = false;
@@ -828,7 +836,8 @@ async function downloadModrinthMod(gameVersion, requested = {}) {
   if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The mod file checksum does not match.'); }
   fs.writeFileSync(target, buffer);
   const projectId = String(requested.projectId || version.project_id || '');
-  if (projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null, downloadUrl: file.url, sha512: file.hashes?.sha512 || null, versionId: selected.id, versionNumber: selected.version_number }; writeJson(installedProjectsFile(normalizedVersion), projects); }
+  if (projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null, downloadUrl: file.url, sha512: file.hashes?.sha512 || null, versionId: version.id, versionNumber: version.version_number }; writeJson(installedProjectsFile(normalizedVersion), projects); }
+  setModSource(normalizedVersion, file.filename, 'modrinth');
   return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: projectId || null };
 }
 async function communityCookieHeader() {
@@ -1719,6 +1728,45 @@ ipcMain.handle('community-upload-preset', async (_event, metadata) => { try { re
 ipcMain.handle('community-list-skins', async () => { try { return { ok: true, skins: await listCommunitySkins() }; } catch (error) { return { ok: false, skins: [], error: error.message }; } });
 ipcMain.handle('community-download-skin', async (_event, shareCode) => { try { return await downloadCommunitySkin(shareCode); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('search-mods', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchModrinth(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
+function copyImportedModFiles(version, sourceFiles, source, details = {}) {
+  const normalized = sanitizeVersion(version);
+  if (!normalized) throw new Error('Select a valid Minecraft version first.');
+  const targetDir = modsRoot(normalized); ensureDir(targetDir);
+  const imported = []; const skipped = []; const limit = 100 * 1024 * 1024;
+  for (const sourcePath of sourceFiles || []) {
+    const sourceFile = path.resolve(String(sourcePath || ''));
+    const fileName = path.basename(sourceFile);
+    if (!/^\S+\.jar(?:\.disabled)?$/i.test(fileName) || !exists(sourceFile)) { skipped.push(fileName || 'unknown file'); continue; }
+    let stat; try { stat = fs.statSync(sourceFile); } catch (_) { skipped.push(fileName); continue; }
+    if (!stat.isFile() || stat.size < 1024 || stat.size > limit) { skipped.push(fileName); continue; }
+    const target = path.join(targetDir, fileName);
+    if (exists(target)) { skipped.push(fileName); continue; }
+    fs.copyFileSync(sourceFile, target, fs.constants.COPYFILE_EXCL);
+    setModSource(normalized, fileName, source, details);
+    imported.push(fileName);
+  }
+  return { ok: true, version: normalized, imported, skipped, source: sourceLabelFor(source) };
+}
+async function importExternalModFiles(version) {
+  const selection = await dialog.showOpenDialog(mainWindow, { title: 'Import local Minecraft mod files', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Minecraft Mods', extensions: ['jar'] }] });
+  if (selection.canceled || !selection.filePaths.length) return { ok: false, canceled: true };
+  return copyImportedModFiles(version, selection.filePaths, 'external');
+}
+async function transferModrinthProfileMods(version) {
+  const defaultPath = path.join(process.env.APPDATA || app.getPath('appData'), 'ModrinthApp', 'profiles');
+  const selection = await dialog.showOpenDialog(mainWindow, { title: 'Choose a Modrinth profile folder', defaultPath, properties: ['openDirectory'] });
+  if (selection.canceled || !selection.filePaths[0]) return { ok: false, canceled: true };
+  const selected = path.resolve(selection.filePaths[0]);
+  const sourceMods = path.basename(selected).toLowerCase() === 'mods' ? selected : path.join(selected, 'mods');
+  if (!exists(sourceMods)) throw new Error('The selected folder does not contain a mods directory. Select a Modrinth profile folder.');
+  const profileRoot = path.basename(selected).toLowerCase() === 'mods' ? path.dirname(selected) : selected;
+  const profileName = path.basename(profileRoot).replace(/[._-]+/g, ' ').trim() || 'Modrinth profile';
+  const files = fs.readdirSync(sourceMods, { withFileTypes: true }).filter(entry => entry.isFile() && /\.jar(?:\.disabled)?$/i.test(entry.name)).map(entry => path.join(sourceMods, entry.name));
+  const result = copyImportedModFiles(version, files, 'modrinth-profile', { profileName, label: `Modrinth profile · ${profileName}` });
+  return { ...result, profileName };
+}
+ipcMain.handle('import-external-mod-files', async (_event, version) => { try { const result = await importExternalModFiles(version); if (result.ok) send('status', { type: 'success', message: `${result.imported.length} external mod file(s) added to Minecraft ${result.version}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('transfer-modrinth-profile', async (_event, version) => { try { const result = await transferModrinthProfileMods(version); if (result.ok) send('status', { type: 'success', message: `${result.imported.length} mod(s) transferred from ${result.profileName}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
@@ -1738,7 +1786,7 @@ ipcMain.handle('open-instance-folder', (_event, version) => { const normalized =
 ipcMain.handle('list-resource-packs', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const dir = resourcePacksRoot(normalized); ensureDir(dir); return fs.readdirSync(dir).filter(name => name.toLowerCase().endsWith('.zip')).sort().map(file => ({ name: file, file })); });
 ipcMain.handle('remove-resource-pack', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); if (!normalized || !/^\S+\.zip$/i.test(safeName)) return { ok: false, error: 'Invalid resource pack file.' }; const target = path.join(resourcePacksRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The resource pack was not found.' }; fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${safeName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: safeName, version: normalized }; });
 ipcMain.handle('open-cosmetics-profile', (_event, version = COSMETICS_MOD_VERSION) => { if (version !== COSMETICS_MOD_VERSION) return { ok: false, error: 'No cosmetics profile for this version.' }; ensureDir(vortexConfigRoot(version)); return shell.openPath(vortexConfigRoot(version)); });
-ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
+ipcMain.handle('list-mods', async (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return []; const required = mandatoryModNames(normalized); const cosmetics = protectedModNames(normalized); const dir = modsRoot(normalized); ensureDir(dir); const files = fs.readdirSync(dir).filter(name => name.endsWith('.jar') || name.endsWith('.jar.disabled')).sort(); return Promise.all(files.map(async file => { const enabled = file.endsWith('.jar'); const name = enabled ? file : file.slice(0, -'.disabled'.length); const mapping = await mapInstalledModrinthFile(normalized, name); const stored = mapping && typeof mapping.record === 'object' ? mapping.record : null; const metadata = mapping ? await getProjectMetadata(mapping.projectId) : null; const iconUrl = metadata?.iconUrl || stored?.iconUrl || null; const iconData = mapping && iconUrl ? (metadata?.iconData || await cachedModIconData(mapping.projectId, iconUrl)) : null; const importedSource = modSourceForFile(normalized, name); const sourceLabel = cosmetics.has(name) ? 'Vortex managed' : required.has(name) ? 'Vortex managed' : importedSource?.label || (mapping ? 'Modrinth' : 'Local file'); return { name, file, enabled, required: required.has(name), protected: cosmetics.has(name), projectId: mapping?.projectId || null, iconUrl, iconData, title: metadata?.title || stored?.title || null, author: metadata?.author || stored?.author || null, source: cosmetics.has(name) || required.has(name) ? 'vortex' : (importedSource?.source || (mapping ? 'modrinth' : 'external')), sourceLabel, role: cosmetics.has(name) ? 'Vortex Cosmetics core · automatically protected' : required.has(name) ? 'Vortex required mod' : enabled ? 'Custom mod · enabled' : 'Custom mod · disabled' }; })); });
 ipcMain.handle('remove-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be removed.' }; const target = path.join(modsRoot(normalized), safeName); if (!exists(target)) return { ok: false, error: 'The mod file was not found.' }; fs.rmSync(target, { force: true }); removeProjectMappingForFile(normalized, baseName); send('status', { type: 'success', message: `${baseName} was removed from Minecraft ${normalized}.` }); return { ok: true, fileName: baseName, version: normalized }; });
 ipcMain.handle('toggle-mod', (_event, version, fileName) => { const normalized = sanitizeVersion(version); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!normalized || !/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) return { ok: false, error: 'Invalid mod file.' }; if (mandatoryModNames(normalized).has(baseName) || protectedModNames(normalized).has(baseName)) return { ok: false, error: 'This Vortex required mod is protected and cannot be disabled.' }; const dir = modsRoot(normalized); const source = path.join(dir, safeName); if (!exists(source)) return { ok: false, error: 'The mod file was not found.' }; const targetName = safeName.endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(dir, targetName); if (exists(target)) return { ok: false, error: 'The target file already exists.' }; fs.renameSync(source, target); return { ok: true, file: targetName, enabled: targetName.endsWith('.jar') }; });
 ipcMain.handle('set-cosmetics', (_event, cosmetics = {}) => {

@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('vortex', {
   listResourcePacks: (version) => ipcRenderer.invoke('list-resource-packs', version),
   removeResourcePack: (version, fileName) => ipcRenderer.invoke('remove-resource-pack', version, fileName),
   downloadMod: (version, mod) => ipcRenderer.invoke('download-mod', version, mod),
+  importExternalModFiles: (version) => ipcRenderer.invoke('import-external-mod-files', version),
+  transferModrinthProfile: (version) => ipcRenderer.invoke('transfer-modrinth-profile', version),
   installModProject: (projectId, version) => ipcRenderer.invoke('install-mod-project', projectId, version),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
