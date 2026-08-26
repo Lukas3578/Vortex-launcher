@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.63',
+    title: 'Loading Restored',
+    summary: 'The launcher content pipeline is working again across every category.',
+    items: [
+      'Fixed the refresh crash caused by removed Community Skin elements.',
+      'Instance cards no longer reference the removed Cosmetics status row.',
+      'Servers, mods, resource packs and installed content now render again after startup.',
+      'Removed stale UI lookups so category navigation remains stable.'
+    ]
+  },
+  {
     version: '0.9.62',
     title: 'Focused Launcher Navigation',
     summary: 'A cleaner launcher with only the workflows you actually need.',

@@ -49,6 +49,8 @@ jobs:
           - AI Studio und Community Skins wurden vollständig aus der Launcher-Oberfläche entfernt.
           - Der F11-Fullscreen-Hinweis wurde aus der Kopfzeile entfernt; die Tastenkombination bleibt weiterhin verfügbar.
           - Die veraltete 3D-Cosmetics-Anzeige wurde aus den Instanzkarten entfernt.
+          - Ladefehler nach der Feature-Bereinigung behoben: Instanz-, Mod-, Resource-Pack- und Server-Inhalte werden wieder korrekt gerendert.
+          - Verwaiste Community-Skin-Elemente und nicht mehr vorhandene Container werden nicht mehr vom Refresh-Ablauf angesprochen.
           - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
           - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
