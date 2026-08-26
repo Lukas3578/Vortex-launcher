@@ -60,6 +60,8 @@ jobs:
           - Neue Modpack-Kategorie mit Modrinth-Suche, 18 Pack-Ergebnissen und direktem Download & Install.
           - Bestehende Modrinth .mrpack-Dateien können sicher in die gewählte Fabric-Instanz importiert werden.
           - Die aktuelle Instanz kann als Modrinth-kompatible .mrpack-Datei exportiert werden.
+          - Neue Übersicht für installierte Modpacks mit Minecraft-Version, Dateianzahl, Installationsdatum und Öffnen-Aktion.
+          - Modpack-Installationen werden dauerhaft gespeichert und beim Import auf die ausgewählte Minecraft-Version geprüft.
           - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
           - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.

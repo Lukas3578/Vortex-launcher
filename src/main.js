@@ -1753,11 +1753,14 @@ async function fetchVerifiedBuffer(url, sha512 = null) {
   if (sha512 && crypto.createHash('sha512').update(buffer).digest('hex').toLowerCase() !== sha512.toLowerCase()) throw new Error('The downloaded pack hash is invalid.');
   return buffer;
 }
+function installedModpacksFile() { return path.join(dataRoot, 'installed-modpacks.json'); }
+function loadInstalledModpacks() { const value = loadJson(installedModpacksFile(), []); return Array.isArray(value) ? value : []; }
+function saveInstalledModpacks(value) { writeJson(installedModpacksFile(), value.slice(0, 100)); }
 async function installMrpackFile(version, filePath) {
   const normalized = sanitizeVersion(version); if (!normalized) throw new Error('Invalid Minecraft version.');
   const source = path.resolve(filePath); if (!fs.existsSync(source) || path.extname(source).toLowerCase() !== '.mrpack') throw new Error('Please choose a valid .mrpack file.');
   const archive = await JSZip.loadAsync(fs.readFileSync(source)); const indexEntry = archive.file('modrinth.index.json'); if (!indexEntry) throw new Error('This file is not a valid Modrinth Modpack.');
-  const index = JSON.parse(await indexEntry.async('string')); if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.');
+  const index = JSON.parse(await indexEntry.async('string')); if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.'); const requiredMinecraft = String(index.dependencies?.minecraft || ''); if (requiredMinecraft && !requiredMinecraft.includes(normalized)) throw new Error(`This pack requires Minecraft ${requiredMinecraft}, but the selected instance is ${normalized}.`);
   const targetRoot = instanceRoot(normalized); ensureDir(targetRoot); const installed = []; const skipped = [];
   for (const entry of Array.isArray(index.files) ? index.files : []) {
     const safePath = modpackArchiveSafePath(entry.path); if (!safePath || !Array.isArray(entry.downloads) || !entry.downloads[0]) { skipped.push(entry.path || 'unknown'); continue; }
@@ -1766,7 +1769,8 @@ async function installMrpackFile(version, filePath) {
   for (const prefix of ['overrides/', 'client-overrides/']) {
     for (const entry of Object.values(archive.files)) { if (entry.dir || !entry.name.startsWith(prefix)) continue; const safePath = modpackArchiveSafePath(entry.name.slice(prefix.length)); if (!safePath) continue; const target = path.join(targetRoot, safePath); ensureDir(path.dirname(target)); fs.writeFileSync(target, await entry.async('nodebuffer')); }
   }
-  return { ok: true, name: index.name || path.basename(source, '.mrpack'), version: index.versionId || '', installed, skipped, targetVersion: normalized };
+  const packRecord = { id: `${normalized}:${index.name || path.basename(source, '.mrpack')}`, name: index.name || path.basename(source, '.mrpack'), packVersion: index.versionId || '', targetVersion: normalized, fileCount: installed.length, installedAt: new Date().toISOString() }; const existing = loadInstalledModpacks().filter(item => item.id !== packRecord.id); saveInstalledModpacks([packRecord, ...existing]);
+  return { ok: true, name: packRecord.name, version: packRecord.packVersion, installed, skipped, targetVersion: normalized };
 }
 async function exportMrpackFile(version, metadata = {}) {
   const normalized = sanitizeVersion(version); if (!normalized) throw new Error('Invalid Minecraft version.'); const root = instanceRoot(normalized); const zip = new JSZip();
@@ -1779,3 +1783,5 @@ ipcMain.handle('search-modpacks', async (_event, query, version, page) => { try 
 ipcMain.handle('download-modpack', async (_event, version, pack) => { try { const compatible = await getModpackVersion(pack.projectId, version); const temp = path.join(app.getPath('temp'), `vortex-${Date.now()}.mrpack`); fs.writeFileSync(temp, await fetchVerifiedBuffer(compatible.downloadUrl, compatible.sha512)); const result = await installMrpackFile(version, temp); fs.rmSync(temp, { force: true }); return { ...result, projectId: pack.projectId, versionNumber: compatible.versionNumber }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('import-mrpack', async (_event, version) => { try { const result = await dialog.showOpenDialog(mainWindow, { title: 'Import Modrinth Modpack', properties: ['openFile'], filters: [{ name: 'Modrinth Modpack', extensions: ['mrpack'] }] }); if (result.canceled || !result.filePaths[0]) return { ok: false, canceled: true }; return await installMrpackFile(version, result.filePaths[0]); } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('export-mrpack', async (_event, version, metadata) => { try { return await exportMrpackFile(version, metadata); } catch (error) { return { ok: false, error: error.message }; } });
+
+ipcMain.handle('list-installed-modpacks', () => loadInstalledModpacks().map(item => ({ ...item, exists: fs.existsSync(instanceRoot(item.targetVersion)) })));
