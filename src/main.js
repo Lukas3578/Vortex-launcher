@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.59',
+    title: 'Account Switcher Refresh',
+    summary: 'Switch accounts with a cleaner, brighter and more polished account menu.',
+    items: [
+      'Active account cards now have clearer selection states and better account hierarchy.',
+      'Improved avatar presentation with depth, glow and smoother hover interactions.',
+      'Profile image actions and Add account are easier to discover and use.',
+      'The popup has improved spacing, contrast, focus and glass styling.'
+    ]
+  },
+  {
     version: '0.9.56',
     title: 'Photon Launcher Experience',
     summary: 'The Vortex launcher is now smoother, sharper and faster to control.',
