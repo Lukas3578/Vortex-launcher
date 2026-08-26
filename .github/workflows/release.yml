@@ -31,48 +31,9 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Neu
-          - Vortex Client ohne öffentlichen Cosmetics-Bereich.
-          - Photon-Redesign mit moderner Glasmorphism-Oberfläche, besserer Hierarchie und responsivem Layout.
-          - Flüssige Seitenübergänge, Hover-Animationen, Ambient-Glow und Reduced-Motion-Unterstützung.
-          - Neue Quick Actions mit Ctrl + K für Launch, Navigation, Mods, Instanzen und Ordnerzugriff.
-          - Automatische Erkennung und erneute Anmeldung bei ungültigen Minecraft-Sitzungen.
-          - Vortex Client Mod für Minecraft 1.21.11 auf Version 2.28.2 aktualisiert.
-          - Die gebündelte Datei vortexclient-2.28.2.jar ersetzt die vorherige Mod-Version.
-          - Das Vortex Plus Addon für Minecraft 1.21.11 wurde durch die bereitgestellte neue Fassung ersetzt.
-          - Die Datei vortex-plus-addon-1.0.0.jar ist im 1.21.11-Modpack aktualisiert.
-          - Das Account-Menü wurde mit neuen Active-States, Avatar-Karten, Glow-Effekten und weicheren Interaktionen überarbeitet.
-          - Alle Launcher-Kategorien erhalten ein einheitliches Vortex-2.0-Design mit verbesserten Karten, Suchbereichen, Statusanzeigen und Empty-States.
-          - Neue Karten-Lichtreflexe, gestaffelte Ladeanimationen, Focus-Ringe und sanftes Scrollen verbessern die Navigation.
-          - Enter startet Suchen direkt; Ctrl + Shift + R lädt den Launcher global neu.
-          - Zweite Designrunde mit individuellen Motion-Details für Server, Bedrock, Instanzen, Mods, Packs, Community und Cosmetics.
-          - AI Studio und Community Skins wurden vollständig aus der Launcher-Oberfläche entfernt.
-          - Der F11-Fullscreen-Hinweis wurde aus der Kopfzeile entfernt; die Tastenkombination bleibt weiterhin verfügbar.
-          - Die veraltete 3D-Cosmetics-Anzeige wurde aus den Instanzkarten entfernt.
-          - Ladefehler nach der Feature-Bereinigung behoben: Instanz-, Mod-, Resource-Pack- und Server-Inhalte werden wieder korrekt gerendert.
-          - Verwaiste Community-Skin-Elemente und nicht mehr vorhandene Container werden nicht mehr vom Refresh-Ablauf angesprochen.
-          - Die Community ist wieder sichtbar und enthält jetzt ausschließlich Presets und Macros, ohne Community-Skins.
-          - Die echte installierte Launcher-Version wird dynamisch im Footer angezeigt.
-          - F11 und Escape werden direkt im Electron-Fenster verarbeitet und funktionieren dadurch zuverlässig.
-          - Der Mod Installer zeigt jetzt bis zu 18 kompatible Treffer statt nur einer kleinen Auswahl.
-          - Client-Side-Mods werden automatisch priorisiert; optionale, serverseitige und allgemeine kompatible Mods sind eindeutig markiert.
-          - Modrinth-Kompatibilität, Version und Installationsstatus werden direkt auf jeder Ergebnis-Karte angezeigt.
-          - Neue Modpack-Kategorie mit Modrinth-Suche, 18 Pack-Ergebnissen und direktem Download & Install.
-          - Bestehende Modrinth .mrpack-Dateien können sicher in die gewählte Fabric-Instanz importiert werden.
-          - Die aktuelle Instanz kann als Modrinth-kompatible .mrpack-Datei exportiert werden.
-          - Neue Übersicht für installierte Modpacks mit Minecraft-Version, Dateianzahl, Installationsdatum und Öffnen-Aktion.
-          - Jedes Modpack wird in einem eigenen separaten Instance-Ordner installiert und kann direkt mit Play gestartet werden.
-          - Eigene MRPACK-Dateien können aus dem Launcher in die Vortex Community veröffentlicht werden.
-          - Öffentliche Community-Modpacks können angezeigt, heruntergeladen und in einer eigenen Instanz installiert werden.
-          - Modpack-Installationen werden dauerhaft gespeichert und beim Import auf die ausgewählte Minecraft-Version geprüft.
-          - Karten reagieren mit sanftem Lichtreflex, tieferen Hover-Lifts und gestaffelten Inhalten auf Interaktionen.
-          - Verbesserte Fullscreen- und Wide-Screen-Darstellung mit konsistenter Premium-Oberfläche.
-          - Separate Sandbox Vortex App für Tests mit Cosmetics.
-          - Klare Trennung zwischen normalem Launcher und Sandbox-Experimenten.
-
-          ### Behoben
-          - Cosmetics-Navigation und Cosmetics-Seite sind aus dem normalen Launcher entfernt.
-          - Cape-Konfiguration und mitgelieferte Assets werden vor dem Start geprüft.
+          ### Aktualisiert
+          - Der integrierte **VortexClient Fabric** für Minecraft 26.2 wurde auf Version **2.28.17+26.2** aktualisiert.
+          - Die bisherige Version 2.28.14+26.2 wird dadurch im 26.2-Modpack ersetzt.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
@@ -80,7 +41,7 @@ jobs:
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
 
           ### Hinweis
-          Cosmetics stehen ausschließlich in der eigenständigen Sandbox Vortex App zur Verfügung.
+          Dieses Update stellt sicher, dass neue 26.2-Instanzen die aktuelle VortexClient-Modversion enthalten.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
