@@ -48,6 +48,17 @@ const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexP
 
 const RELEASE_NEWS = [
   {
+    version: '0.9.60',
+    title: 'Vortex 2.0 Experience',
+    summary: 'Every launcher category now feels more consistent, responsive and alive.',
+    items: [
+      'Improved Overview, Servers, Bedrock, Instances, Mods, Resource Packs, AI Studio, Community and Cosmetics layouts.',
+      'Added interactive card spotlights, staggered content animations, smoother scrolling and stronger focus states.',
+      'Press Enter inside a Modrinth search to search instantly; Ctrl + Shift + R refreshes the launcher state.',
+      'Upgraded shared panels, empty states, status badges, search bars and responsive wide-screen behavior.'
+    ]
+  },
+  {
     version: '0.9.59',
     title: 'Account Switcher Refresh',
     summary: 'Switch accounts with a cleaner, brighter and more polished account menu.',

@@ -42,6 +42,9 @@ jobs:
           - Das Vortex Plus Addon für Minecraft 1.21.11 wurde durch die bereitgestellte neue Fassung ersetzt.
           - Die Datei vortex-plus-addon-1.0.0.jar ist im 1.21.11-Modpack aktualisiert.
           - Das Account-Menü wurde mit neuen Active-States, Avatar-Karten, Glow-Effekten und weicheren Interaktionen überarbeitet.
+          - Alle Launcher-Kategorien erhalten ein einheitliches Vortex-2.0-Design mit verbesserten Karten, Suchbereichen, Statusanzeigen und Empty-States.
+          - Neue Karten-Lichtreflexe, gestaffelte Ladeanimationen, Focus-Ringe und sanftes Scrollen verbessern die Navigation.
+          - Enter startet Suchen direkt; Ctrl + Shift + R lädt den Launcher global neu.
           - Separate Sandbox Vortex App für Tests mit Cosmetics.
           - Klare Trennung zwischen normalem Launcher und Sandbox-Experimenten.
 

@@ -372,3 +372,26 @@ addLog('Vortex Client Launcher 0.9.54 ready.'); refresh();
   });
   void syncFullscreenClass();
 })();
+
+
+// Global category UX: spotlight cards, keyboard navigation and quick refresh.
+(() => {
+  document.addEventListener('pointermove', event => {
+    const card = event.target.closest('.info-card,.server-card,.mod-card,.pack-card,.instance-card,.community-preset-card,.community-skin-card,.cosmetic-panel');
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--spot-x', `${event.clientX - rect.left}px`);
+    card.style.setProperty('--spot-y', `${event.clientY - rect.top}px`);
+  }, { passive: true });
+  document.querySelectorAll('.mod-search-bar input').forEach(input => input.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    const button = input.parentElement?.querySelector('button');
+    if (button && !button.disabled) { event.preventDefault(); button.click(); }
+  }));
+  document.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', () => {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  }));
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'r') { event.preventDefault(); void refresh(); }
+  });
+})();
