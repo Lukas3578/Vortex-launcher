@@ -822,7 +822,7 @@ async function downloadResourcePack(gameVersion, requested = {}) {
   fs.writeFileSync(target, buffer);
   return { ok: true, fileName, size: buffer.length, version: normalizedVersion, projectId: requested.projectId || null };
 }
-async function downloadModrinthMod(gameVersion, requested = {}) {
+async function downloadModrinthMod(gameVersion, requested = {}, targetDirOverride = null) {
   const normalizedVersion = validModrinthVersion(gameVersion);
   if (!normalizedVersion || !requested.versionId) throw new Error('Invalid mod or Minecraft version.');
   const version = await modrinthJson(`${MODRINTH_API}/version/${encodeURIComponent(String(requested.versionId))}`);
@@ -830,7 +830,7 @@ async function downloadModrinthMod(gameVersion, requested = {}) {
   const file = selectPrimaryJar(version.files);
   if (!file || !/^https:\/\//i.test(file.url) || !/^[a-zA-Z0-9][a-zA-Z0-9._+-]*\.jar$/i.test(file.filename)) throw new Error('Mod file could not be securely determined.');
   if (file.size > 100 * 1024 * 1024) throw new Error('The mod file is larger than 100 MB and was rejected for security reasons.');
-  const targetDir = modsRoot(normalizedVersion); ensureDir(targetDir);
+  const targetDir = targetDirOverride ? path.resolve(String(targetDirOverride)) : modsRoot(normalizedVersion); ensureDir(targetDir);
   const target = path.join(targetDir, file.filename);
   if (exists(target)) throw new Error(`The file ${file.filename} already exists in this instance.`);
   const response = await fetch(file.url, { headers: { 'User-Agent': MODRINTH_USER_AGENT }, signal: AbortSignal.timeout(120000) });
@@ -840,8 +840,8 @@ async function downloadModrinthMod(gameVersion, requested = {}) {
   if (file.hashes?.sha512) { const digest = crypto.createHash('sha512').update(buffer).digest('hex'); if (digest.toLowerCase() !== file.hashes.sha512.toLowerCase()) throw new Error('The mod file checksum does not match.'); }
   fs.writeFileSync(target, buffer);
   const projectId = String(requested.projectId || version.project_id || '');
-  if (projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null, downloadUrl: file.url, sha512: file.hashes?.sha512 || null, versionId: version.id, versionNumber: version.version_number }; writeJson(installedProjectsFile(normalizedVersion), projects); }
-  setModSource(normalizedVersion, file.filename, 'modrinth');
+  if (!targetDirOverride && projectId) { const metadata = await getProjectMetadata(projectId); const projects = installedProjectMap(normalizedVersion); projects[projectId] = { fileName: file.filename, title: metadata?.title || '', author: metadata?.author || '', iconUrl: metadata?.iconUrl || null, downloadUrl: file.url, sha512: file.hashes?.sha512 || null, versionId: version.id, versionNumber: version.version_number }; writeJson(installedProjectsFile(normalizedVersion), projects); }
+  if (!targetDirOverride) setModSource(normalizedVersion, file.filename, 'modrinth');
   return { ok: true, fileName: file.filename, size: buffer.length, version: normalizedVersion, projectId: projectId || null };
 }
 async function communityCookieHeader() {
@@ -2000,3 +2000,22 @@ async function uploadCommunityModpack(metadata = {}) { const state = await getCo
 ipcMain.handle('community-list-modpacks', async () => { try { return { ok: true, packs: await listCommunityModpacks() }; } catch (error) { return { ok: false, packs: [], error: error.message }; } });
 ipcMain.handle('community-download-modpack', async (_event, shareCode, version) => { try { const result = await downloadCommunityModpack(shareCode, version); const state = result.targetVersion ? saveState({ selectedVersion: result.targetVersion }) : loadState(); return { ok: true, ...result, selectedVersion: state.selectedVersion, state }; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('community-upload-modpack', async (_event, metadata) => { try { return await uploadCommunityModpack(metadata); } catch (error) { return { ok: false, error: error.message }; } });
+
+// Modpack detail workspace: manage only files inside the selected isolated pack.
+function getInstalledModpackRecord(instanceId) { return loadInstalledModpacks().find(item => item.id === String(instanceId)) || null; }
+function getInstalledModpackModsRoot(instanceId) {
+  const pack = getInstalledModpackRecord(instanceId);
+  if (!pack) throw new Error('The modpack was not found.');
+  const root = path.resolve(pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id));
+  const managedRoot = path.resolve(instancesRoot, 'modpacks');
+  if (!root.startsWith(`${managedRoot}${path.sep}`)) throw new Error('This modpack location is outside the managed instances directory.');
+  const mods = path.join(root, 'mods'); ensureDir(mods); return { pack, root, mods };
+}
+function listModpackFiles(instanceId) {
+  const { mods } = getInstalledModpackModsRoot(instanceId);
+  return fs.readdirSync(mods).filter(name => /\.jar(?:\.disabled)?$/i.test(name)).sort().map(file => ({ file, name: file.replace(/\.disabled$/i, ''), enabled: file.toLowerCase().endsWith('.jar') }));
+}
+ipcMain.handle('list-modpack-mods', (_event, instanceId) => { try { return { ok: true, mods: listModpackFiles(instanceId) }; } catch (error) { return { ok: false, mods: [], error: error.message }; } });
+ipcMain.handle('toggle-modpack-mod', (_event, instanceId, fileName) => { try { const { pack, mods } = getInstalledModpackModsRoot(instanceId); const safeName = path.basename(String(fileName || '')); if (!/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) throw new Error('Invalid mod file.'); const baseName = safeName.replace(/\.disabled$/i, ''); if (isProtectedCosmeticsMod(baseName)) throw new Error('The Vortex core mod is protected and cannot be disabled.'); const source = path.join(mods, safeName); if (!exists(source)) throw new Error('The mod file was not found.'); const targetName = safeName.toLowerCase().endsWith('.jar') ? `${safeName}.disabled` : safeName.slice(0, -'.disabled'.length); const target = path.join(mods, targetName); if (exists(target)) throw new Error('The target file already exists.'); fs.renameSync(source, target); send('status', { type: 'success', message: `${baseName} ${targetName.endsWith('.jar') ? 'enabled' : 'disabled'} in ${pack.name}.` }); return { ok: true, file: targetName, enabled: targetName.toLowerCase().endsWith('.jar') }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('remove-modpack-mod', (_event, instanceId, fileName) => { try { const { pack, mods } = getInstalledModpackModsRoot(instanceId); const safeName = path.basename(String(fileName || '')); const baseName = safeName.replace(/\.disabled$/i, ''); if (!/^\S+\.jar(?:\.disabled)?$/i.test(safeName)) throw new Error('Invalid mod file.'); if (isProtectedCosmeticsMod(baseName)) throw new Error('The Vortex core mod is protected and cannot be removed.'); const target = path.join(mods, safeName); if (!exists(target)) throw new Error('The mod file was not found.'); fs.rmSync(target, { force: true }); send('status', { type: 'success', message: `${baseName} was removed from ${pack.name}.` }); return { ok: true, file: baseName }; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('download-modpack-mod', async (_event, instanceId, requested) => { try { const { pack, mods } = getInstalledModpackModsRoot(instanceId); const result = await downloadModrinthMod(pack.targetVersion, requested, mods); send('status', { type: 'success', message: `${result.fileName} was added to ${pack.name}.` }); return { ...result, packId: pack.id }; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
