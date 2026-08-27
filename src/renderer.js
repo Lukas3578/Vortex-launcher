@@ -534,6 +534,8 @@ $('runHealthCheckBtn')?.addEventListener('click', runInstanceHealthCheck);
       field.blur();
     });
   });
+  void window.vortex.setCinematicHotkeys?.(keys);
+  window.vortex.onCinematicHotkey?.(key => window.dispatchEvent(new KeyboardEvent('keydown', { key })));
   window.addEventListener('keydown', event => {
     if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
     if (document.activeElement?.classList.contains('hotkey-input')) return;

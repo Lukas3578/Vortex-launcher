@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('vortex', {
   listResourcePacks: (version) => ipcRenderer.invoke('list-resource-packs', version),
   openResourcePacksFolder: (version) => ipcRenderer.invoke('open-resource-packs-folder', version),
   findMinecraftWindow: () => ipcRenderer.invoke('find-minecraft-window'),
+  setCinematicHotkeys: (hotkeys) => ipcRenderer.invoke('set-cinematic-hotkeys', hotkeys),
   startVideoRecording: (title) => ipcRenderer.invoke('start-video-recording', title),
   appendVideoRecording: (id, chunk) => ipcRenderer.invoke('append-video-recording', id, chunk),
   finishVideoRecording: (id) => ipcRenderer.invoke('finish-video-recording', id),
@@ -88,5 +89,6 @@ contextBridge.exposeInMainWorld('vortex', {
   onProgress: (callback) => ipcRenderer.on('progress', (_event, value) => callback(value)),
   onInstanceMaintenance: (callback) => ipcRenderer.on('instance-maintenance', (_event, value) => callback(value)),
   onCommunityState: (callback) => ipcRenderer.on('community-state', (_event, value) => callback(value)),
-  onUpdateState: (callback) => ipcRenderer.on('update-state', (_event, value) => callback(value))
+  onUpdateState: (callback) => ipcRenderer.on('update-state', (_event, value) => callback(value)),
+  onCinematicHotkey: (callback) => ipcRenderer.on('cinematic-hotkey', (_event, value) => callback(value))
 });

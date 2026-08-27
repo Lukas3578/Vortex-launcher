@@ -1,4 +1,4 @@
-const { app, BrowserWindow, desktopCapturer, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
+const { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -20,6 +20,7 @@ const HATS = ['none', 'vortex-cap', 'neon-halo', 'void-crown', 'cyber-headphones
 const EMBLEMS = ['none', 'vortex-crest', 'nebula-mark', 'void-rune'];
 const BUNDLED_TEXTURED_CAPES = new Set(EMBLEMS.filter(id => id !== 'none'));
 let mainWindow;
+let cinematicHotkeys = { record: 'F9', pause: 'F7', marker: 'F8', stop: 'F10' };
 const minecraftProcesses = new Map();
 let account = null;
 let accounts = [];
@@ -1690,10 +1691,11 @@ app.whenReady().then(() => {
   setupAutoUpdater();
   configureMinecraftCapture();
   createWindow();
+  registerCinematicHotkeys();
   startInstanceMaintenance();
   startBackgroundUpdateChecks();
 });
-app.on('before-quit', () => {
+app.on('before-quit', () => { globalShortcut.unregisterAll();
   if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer);
   if (updateCheckTimer) clearInterval(updateCheckTimer);
 });
@@ -1791,6 +1793,8 @@ ipcMain.handle('download-mod', async (_event, version, mod) => { try { const res
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} was added to the resource packs of Minecraft ${result.version}.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+function registerCinematicHotkeys() { globalShortcut.unregisterAll(); for (const key of Object.values(cinematicHotkeys)) { if (!/^F([1-9]|1[0-2])$/.test(key)) continue; globalShortcut.register(key, () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('cinematic-hotkey', key); }); } }
+ipcMain.handle('set-cinematic-hotkeys', (_event, next = {}) => { cinematicHotkeys = { ...cinematicHotkeys, ...next }; registerCinematicHotkeys(); return { ok: true, hotkeys: cinematicHotkeys }; });
 ipcMain.handle('find-minecraft-window', async () => { try { const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 }, fetchWindowIcons: false }); const minecraft = sources.find(source => /minecraft/i.test(String(source.name || ''))) || sources.find(source => /lunar|badlion|fabric|forge/i.test(String(source.name || ''))); return minecraft ? { ok: true, id: minecraft.id, name: minecraft.name } : { ok: false, error: 'Minecraft window was not found. Start Minecraft first and keep its window open.' }; } catch (error) { return { ok: false, error: error.message || 'Minecraft window detection failed.' }; } });
 ipcMain.handle('start-video-recording', async (_event, title = 'minecraft-clip') => {
   try {
