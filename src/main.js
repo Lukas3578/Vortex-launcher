@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
+const { app, BrowserWindow, desktopCapturer, ipcMain, dialog, shell, Menu, session, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -1647,6 +1647,20 @@ function makeCosmeticSkin(version, sourceFile, hat, emblem) {
   return profile;
 }
 
+function configureMinecraftCapture() {
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 } });
+      const minecraft = sources.find(source => /minecraft/i.test(String(source.name || '')));
+      callback(minecraft ? { video: minecraft, audio: 'loopback' } : {});
+    } catch (_) { callback({}); }
+  }, { useSystemPicker: true });
+}
+
+const videoRecordingSessions = new Map();
+const MAX_VIDEO_CHUNK_BYTES = 32 * 1024 * 1024;
+const MAX_VIDEO_RECORDING_BYTES = 10 * 1024 * 1024 * 1024;
+
 function createWindow() {
   Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({ width: 1380, height: 880, minWidth: 1080, minHeight: 720, backgroundColor: '#060914', title: 'Vortex Client', autoHideMenuBar: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false } });
@@ -1671,6 +1685,7 @@ process.on('unhandledRejection', reason => { appendPersistentLog(crashLogPath(),
 app.whenReady().then(() => {
   loadAccount();
   setupAutoUpdater();
+  configureMinecraftCapture();
   createWindow();
   startInstanceMaintenance();
   startBackgroundUpdateChecks();
@@ -1773,6 +1788,45 @@ ipcMain.handle('download-mod', async (_event, version, mod) => { try { const res
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} was added to the resource packs of Minecraft ${result.version}.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('start-video-recording', async (_event, title = 'minecraft-clip') => {
+  try {
+    const safeTitle = String(title || 'minecraft-clip').trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'minecraft-clip';
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const result = await dialog.showSaveDialog(mainWindow, { title: 'Save Minecraft Recording', defaultPath: path.join(app.getPath('videos'), `${safeTitle}-${stamp}.webm`), filters: [{ name: 'WebM video', extensions: ['webm'] }] });
+    if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+    await fs.promises.writeFile(result.filePath, Buffer.alloc(0));
+    const id = crypto.randomUUID();
+    videoRecordingSessions.set(id, { filePath: result.filePath, bytes: 0 });
+    return { ok: true, id, fileName: path.basename(result.filePath) };
+  } catch (error) { return { ok: false, error: error.message || 'Could not start video recording.' }; }
+});
+ipcMain.handle('append-video-recording', async (_event, id, chunk) => {
+  const recording = videoRecordingSessions.get(String(id || ''));
+  if (!recording) return { ok: false, error: 'Recording session was not found.' };
+  try {
+    const buffer = Buffer.from(chunk || []);
+    if (!buffer.length || buffer.length > MAX_VIDEO_CHUNK_BYTES) return { ok: false, error: 'The recording chunk is invalid or too large.' };
+    if (recording.bytes + buffer.length > MAX_VIDEO_RECORDING_BYTES) return { ok: false, error: 'The recording reached the 10 GB safety limit.' };
+    await fs.promises.appendFile(recording.filePath, buffer);
+    recording.bytes += buffer.length;
+    return { ok: true, bytes: recording.bytes };
+  } catch (error) { return { ok: false, error: error.message || 'The recording could not be saved.' }; }
+});
+ipcMain.handle('finish-video-recording', (_event, id) => {
+  const recording = videoRecordingSessions.get(String(id || ''));
+  if (!recording) return { ok: false, error: 'Recording session was not found.' };
+  videoRecordingSessions.delete(String(id));
+  return { ok: true, filePath: recording.filePath, fileName: path.basename(recording.filePath), bytes: recording.bytes };
+});
+ipcMain.handle('cancel-video-recording', async (_event, id) => {
+  const recording = videoRecordingSessions.get(String(id || ''));
+  if (!recording) return { ok: true };
+  videoRecordingSessions.delete(String(id));
+  try { await fs.promises.rm(recording.filePath, { force: true }); } catch (_) {}
+  return { ok: true };
+});
+ipcMain.handle('open-videos-folder', () => { const target = app.getPath('videos'); ensureDir(target); return shell.openPath(target); });
+ipcMain.handle('open-resource-packs-folder', (_event, version) => { const normalized = sanitizeVersion(version); if (!normalized) return { ok: false }; ensureDir(resourcePacksRoot(normalized)); return shell.openPath(resourcePacksRoot(normalized)); });
 ipcMain.handle('check-for-updates', () => checkForUpdates());
 ipcMain.handle('download-update', () => downloadUpdate());
 ipcMain.handle('install-update', () => { if (updateState.status !== 'downloaded') return { ok: false, error: 'No downloaded update available.' }; autoUpdater.quitAndInstall(false, true); return { ok: true }; });

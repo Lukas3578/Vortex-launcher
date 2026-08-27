@@ -31,12 +31,16 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Neues Launcher-Kontrollzentrum
-          - Eine neue Schnellaktionsleiste bündelt die wichtigsten Launcher-Funktionen direkt auf der Startseite.
-          - Die aktive Instanz kann jetzt mit einem Klick vorbereitet und bei Bedarf repariert werden.
-          - Eine direkte Update-Prüfung ist verfügbar, ohne den Startbereich zu verlassen.
-          - Mods und Instanzen können direkt aus dem Kontrollzentrum geöffnet werden.
-          - Tastenkürzel beschleunigen den Zugriff: **Strg + P**, **Strg + U**, **Strg + M** und **Strg + I**.
+          ### Vortex Client 1.0.1 · Cinematic Studio
+          - Das neue **Cinematic Studio** nimmt Minecraft lokal als WebM-Video auf.
+          - Wähle das Minecraft-Fenster im Systemdialog, nutze 720p oder 1080p mit 30 bzw. 60 FPS und speichere die Aufnahme direkt auf deinem PC.
+          - Szenenmarker helfen dir, wichtige Momente während der Aufnahme für den späteren Schnitt festzuhalten.
+          - Die Aufnahme wird erst nach deinem Klick gestartet; es erfolgt kein Upload an Vortex oder Dritte.
+
+          ### Erweiterte Kategorien
+          - Die Serverbibliothek kann jetzt alle gespeicherten Server in einem Schritt aktualisieren.
+          - Der Ressourcenpaket-Bereich hat einen direkten Zugriff auf den lokalen Ordner der aktiven Instanz.
+          - Das Kontrollzentrum und die Schnellsuche bieten einen noch schnelleren Einstieg in Mods, Instanzen und das Cinematic Studio.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
