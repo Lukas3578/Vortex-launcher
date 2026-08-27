@@ -385,6 +385,7 @@ const JAVA_RUNTIME_DOWNLOAD_URLS = Object.freeze({
   8: 'https://api.adoptium.net/v3/binary/latest/8/ga/windows/x64/jre/hotspot/normal/eclipse',
   17: 'https://api.adoptium.net/v3/binary/latest/17/ga/windows/x64/jre/hotspot/normal/eclipse',
   21: 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse',
+  22: 'https://api.adoptium.net/v3/binary/latest/22/ga/windows/x64/jre/hotspot/normal/eclipse',
   25: 'https://api.adoptium.net/v3/binary/latest/25/ga/windows/x64/jre/hotspot/normal/eclipse'
 });
 const javaRuntimeInstallPromises = new Map();
@@ -420,16 +421,17 @@ async function launchBedrock() {
   }
 }
 function requiresJava25(version) { return /^26\./.test(String(version || '')); }
-function requiredJavaMajor(version) {
+function requiredJavaMajor(version, minimumMajor = null) {
   const value = String(version || '').trim().replace(/^v/i, '');
-  if (requiresJava25(value)) return 25;
+  const requestedMinimum = Math.max(0, Number(minimumMajor) || 0);
+  if (requiresJava25(value)) return Math.max(25, requestedMinimum);
   const match = value.match(/^1\.(\d+)(?:\.(\d+))?$/);
   if (!match) return 21;
   const minor = Number(match[1]);
   const patch = Number(match[2] || 0);
-  if (minor > 20 || (minor === 20 && patch >= 5)) return 21;
-  if (minor >= 17) return 17;
-  return 8;
+  if (minor > 20 || (minor === 20 && patch >= 5)) return Math.max(21, requestedMinimum);
+  if (minor >= 17) return Math.max(17, Number(minimumMajor) || 0);
+  return Math.max(8, Number(minimumMajor) || 0);
 }
 // minecraft-launcher-core first calls the supplied path with `-version`.
 // Therefore Windows must use java.exe rather than the silent javaw.exe.
@@ -501,8 +503,8 @@ async function installPortableJava(requiredMajor) {
   javaRuntimeInstallPromises.set(requiredMajor, provision);
   try { return await provision; } finally { javaRuntimeInstallPromises.delete(requiredMajor); }
 }
-async function javaPathForVersion(version) {
-  const requiredMajor = requiredJavaMajor(version);
+async function javaPathForVersion(version, minimumMajor = null) {
+  const requiredMajor = requiredJavaMajor(version, minimumMajor);
   const home = await findJavaHome(requiredMajor) || await installPortableJava(requiredMajor);
   const binary = javaExecutable(home);
   if (!exists(binary)) throw new Error(`Java ${requiredMajor} could not be prepared. Restart the launcher and try again.`);
@@ -1504,7 +1506,7 @@ function prepareParallelGameDirectory(version, accountValue) {
   return target;
 }
 function runningProcessKey(kind, accountValue) { return `${kind}:${accountId(accountValue)}`; }
-async function startMinecraftSession({ accountValue, version, server, parallel, gameDirectoryOverride = null }) {
+async function startMinecraftSession({ accountValue, version, server, parallel, gameDirectoryOverride = null, requiredJavaMajorOverride = null }) {
   if (!accountValue?.auth) throw new Error('Please sign in to a Minecraft Microsoft account first.');
   const key = runningProcessKey(parallel ? 'parallel' : 'primary', accountValue);
   if ([...minecraftProcesses.values()].some(entry => entry.accountId === accountId(accountValue))) throw new Error(`${accountValue.username} already has a running Vortex Minecraft session.`);
@@ -1517,7 +1519,7 @@ async function startMinecraftSession({ accountValue, version, server, parallel, 
   launcher.on('data', message => send('log', String(message)));
   launcher.on('download-status', data => send('progress', data));
   launcher.on('progress', data => send('progress', data));
-  const javaPath = await javaPathForVersion(version);
+  const javaPath = await javaPathForVersion(version, requiredJavaMajorOverride);
   const options = { authorization, root: instance.root, version: { number: version, type: 'release', custom: instance.fabric.profileId }, memory: FIXED_MEMORY, javaPath: javaPath || undefined, overrides: { gameDirectory }, window: parallel ? { width: 960, height: 620 } : { width: 1280, height: 720 } };
   if (server) options.quickPlay = { type: 'multiplayer', identifier: server.address };
   const child = await launcher.launch(options);
@@ -1889,6 +1891,7 @@ ipcMain.handle('launch', async (_event, requestedVersion, requestedServerId = nu
 
 // Modpack workspace: Modrinth .mrpack download/import and local composition export.
 const JSZip = require('jszip');
+function modpackJavaMajor(value) { const match = String(value || '').match(/(?:>=|>|=|~|\^)??\s*(\d{1,2})/); return match ? Number(match[1]) : null; }
 function modpackArchiveSafePath(relativePath) {
   const normalized = String(relativePath || '').replace(/\\/g, '/').replace(/^\/+/, '');
   if (!normalized || normalized.split('/').some(part => !part || part === '.' || part === '..')) return null;
@@ -1933,7 +1936,7 @@ async function installMrpackFile(version, filePath) {
   const index = JSON.parse(await indexEntry.async('string'));
   if (index.game !== 'minecraft' || index.formatVersion !== 1) throw new Error('Only Modrinth formatVersion 1 Minecraft packs are supported.');
   const metadataVersion = String(index.dependencies?.minecraft || '').trim().replace(/^v/i, '');
-  const normalized = sanitizeVersion(metadataVersion) || (selectedVersion ? registerMinecraftVersion(selectedVersion) : null);
+  const normalized = (isValidMinecraftVersion(metadataVersion) ? registerMinecraftVersion(metadataVersion) : null) || (selectedVersion ? registerMinecraftVersion(selectedVersion) : null);
   if (!normalized) throw new Error(`The pack does not contain a valid Minecraft release version${selectedVersion ? ` and the selected version is ${selectedVersion}` : ''}.`);
   registerMinecraftVersion(normalized);
   const instanceId = modpackInstanceId(normalized, index.name || path.basename(source, '.mrpack'));
@@ -1954,7 +1957,7 @@ async function installMrpackFile(version, filePath) {
   for (const prefix of ['overrides/', 'client-overrides/']) {
     for (const entry of Object.values(archive.files)) { if (entry.dir || !entry.name.startsWith(prefix)) continue; const safePath = modpackArchiveSafePath(entry.name.slice(prefix.length)); if (!safePath) continue; const target = path.join(targetRoot, safePath); ensureDir(path.dirname(target)); fs.writeFileSync(target, await entry.async('nodebuffer')); }
   }
-  const packRecord = { id: instanceId, name: index.name || path.basename(source, '.mrpack'), packVersion: index.versionId || '', targetVersion: normalized, instanceId, instancePath: targetRoot, fileCount: installed.length, installedAt: new Date().toISOString() }; const existing = loadInstalledModpacks().filter(item => item.id !== packRecord.id); saveInstalledModpacks([packRecord, ...existing]);
+  const packRecord = { id: instanceId, name: index.name || path.basename(source, '.mrpack'), packVersion: index.versionId || '', targetVersion: normalized, instanceId, instancePath: targetRoot, fileCount: installed.length, requiredJavaMajor: modpackJavaMajor(index.dependencies?.java), installedAt: new Date().toISOString() }; const existing = loadInstalledModpacks().filter(item => item.id !== packRecord.id); saveInstalledModpacks([packRecord, ...existing]);
   return { ok: true, name: packRecord.name, version: packRecord.packVersion, installed, skipped, targetVersion: normalized };
 }
 async function exportMrpackFile(version, metadata = {}) {
@@ -1989,7 +1992,7 @@ ipcMain.handle('delete-installed-modpack', (_event, instanceId) => {
     return { ok: false, error: `Could not remove the modpack: ${error.message}` };
   }
 });
-ipcMain.handle('launch-modpack', async (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; try { const parallel = [...minecraftProcesses.values()].some(entry => entry.kind === 'primary'); const result = await startMinecraftSession({ accountValue: account, version: pack.targetVersion, server: null, parallel, gameDirectoryOverride: pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id) }); send('status', { type: 'success', message: `${pack.name} is launching in its own instance.` }); return { ok: true, ...result, modpack: pack.name }; } catch (error) { send('status', { type: 'error', message: `Modpack launch failed: ${error.message}` }); return { ok: false, error: error.message }; } });
+ipcMain.handle('launch-modpack', async (_event, instanceId) => { const pack = loadInstalledModpacks().find(item => item.id === String(instanceId)); if (!pack) return { ok: false, error: 'The modpack was not found.' }; try { const parallel = [...minecraftProcesses.values()].some(entry => entry.kind === 'primary'); const result = await startMinecraftSession({ accountValue: account, version: pack.targetVersion, server: null, parallel, gameDirectoryOverride: pack.instancePath || modpackInstanceRoot(pack.instanceId || pack.id), requiredJavaMajorOverride: pack.requiredJavaMajor || null }); send('status', { type: 'success', message: `${pack.name} is launching in its own instance.` }); return { ok: true, ...result, modpack: pack.name }; } catch (error) { send('status', { type: 'error', message: `Modpack launch failed: ${error.message}` }); return { ok: false, error: error.message }; } });
 
 async function listCommunityModpacks() { const packs = await communityFetch('/api/modpacks'); return Array.isArray(packs) ? packs : []; }
 async function downloadCommunityModpack(shareCode, version) { const code = String(shareCode || ''); if (!/^[a-f0-9]{8,32}$/i.test(code)) throw new Error('Invalid community modpack.'); const cookie = await communityCookieHeader(); const headers = { Accept: 'application/x-modrinth-modpack' }; if (cookie) headers.Cookie = cookie; const response = await fetch(`${COMMUNITY_BASE_URL}/api/modpacks/${encodeURIComponent(code)}/download`, { headers, signal: AbortSignal.timeout(60000) }); if (!response.ok) throw new Error(`Community modpack responded with ${response.status}.`); const buffer = Buffer.from(await response.arrayBuffer()); if (!buffer.length || buffer.length > 25 * 1024 * 1024) throw new Error('The community modpack is too large.'); const temp = path.join(app.getPath('temp'), `vortex-community-${Date.now()}.mrpack`); fs.writeFileSync(temp, buffer); try { return await installMrpackFile(version, temp); } finally { fs.rmSync(temp, { force: true }); } }
