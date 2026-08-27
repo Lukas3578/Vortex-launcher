@@ -31,16 +31,20 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.1 · Cinematic Studio
-          - Das neue **Cinematic Studio** nimmt Minecraft lokal als WebM-Video auf.
-          - Wähle das Minecraft-Fenster im Systemdialog, nutze 720p oder 1080p mit 30 bzw. 60 FPS und speichere die Aufnahme direkt auf deinem PC.
-          - Szenenmarker helfen dir, wichtige Momente während der Aufnahme für den späteren Schnitt festzuhalten.
-          - Die Aufnahme wird erst nach deinem Klick gestartet; es erfolgt kein Upload an Vortex oder Dritte.
+          ### Vortex Client 1.0.2 · Premium Polish
+          - Der gesamte Launcher erhält eine modernere Premium-Oberfläche mit ruhiger Anthrazitbasis und präzisen Cyan-Akzenten.
+          - Navigation, Karten und Schnellaktionen reagieren jetzt mit klareren Hover-, Fokus- und Press-Zuständen.
+          - Seitenwechsel wirken flüssiger, die visuelle Hierarchie ist klarer und wichtige Aktionen sind schneller erkennbar.
+          - Die neue Oberflächenebene ergänzt das Cinematic Studio, die lokale Minecraft-Aufnahme und alle bisherigen Launcher-Funktionen.
 
-          ### Erweiterte Kategorien
-          - Die Serverbibliothek kann jetzt alle gespeicherten Server in einem Schritt aktualisieren.
-          - Der Ressourcenpaket-Bereich hat einen direkten Zugriff auf den lokalen Ordner der aktiven Instanz.
-          - Das Kontrollzentrum und die Schnellsuche bieten einen noch schnelleren Einstieg in Mods, Instanzen und das Cinematic Studio.
+          ### Stabilität und Bedienung
+          - Bestehende Instanzen, Mods, Accounts, Server, Modpacks und Aufnahmen bleiben erhalten.
+          - Die verbesserten Fokuszustände machen den Launcher auch mit Tastatur und Schnellpalette angenehmer bedienbar.
+          - Die reduzierte Bewegungsoption des Betriebssystems wird respektiert.
+
+          ### Update
+          - Für automatische Updates stehen `latest.yml` und die passende `.blockmap` bereit.
+          - Die Version 1.0.2 wird als Windows-Installer veröffentlicht.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
