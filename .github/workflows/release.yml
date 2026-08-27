@@ -31,11 +31,12 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Farbliche Überarbeitung des Update-Fensters
-          - Das Update-Fenster verwendet nun die neutrale Anthrazitpalette des Launchers statt der bisherigen dunkelblauen Oberfläche.
-          - Gedämpfte Cyan-Akzente heben Update-Symbol, Fortschritt und primäre Aktion klar hervor.
-          - Texte, Hinweise und sekundäre Aktionen wurden kontrastreicher und konsistenter abgestimmt.
-          - Der Ablauf für Download, Installation und Neustart bleibt unverändert.
+          ### Neues Launcher-Kontrollzentrum
+          - Eine neue Schnellaktionsleiste bündelt die wichtigsten Launcher-Funktionen direkt auf der Startseite.
+          - Die aktive Instanz kann jetzt mit einem Klick vorbereitet und bei Bedarf repariert werden.
+          - Eine direkte Update-Prüfung ist verfügbar, ohne den Startbereich zu verlassen.
+          - Mods und Instanzen können direkt aus dem Kontrollzentrum geöffnet werden.
+          - Tastenkürzel beschleunigen den Zugriff: **Strg + P**, **Strg + U**, **Strg + M** und **Strg + I**.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
@@ -43,7 +44,7 @@ jobs:
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
 
           ### Hinweis
-          Deine Instanzen, Mods, Accounts und Einstellungen bleiben beim Update erhalten.
+          Die vorhandenen Instanzen, Mods, Accounts und Einstellungen bleiben unverändert erhalten.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
