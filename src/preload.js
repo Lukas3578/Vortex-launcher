@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('vortex', {
   downloadResourcePack: (version, pack) => ipcRenderer.invoke('download-resource-pack', version, pack),
   listResourcePacks: (version) => ipcRenderer.invoke('list-resource-packs', version),
   openResourcePacksFolder: (version) => ipcRenderer.invoke('open-resource-packs-folder', version),
+  findMinecraftWindow: () => ipcRenderer.invoke('find-minecraft-window'),
   startVideoRecording: (title) => ipcRenderer.invoke('start-video-recording', title),
   appendVideoRecording: (id, chunk) => ipcRenderer.invoke('append-video-recording', id, chunk),
   finishVideoRecording: (id) => ipcRenderer.invoke('finish-video-recording', id),

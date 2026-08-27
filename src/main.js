@@ -48,6 +48,7 @@ const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUP
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
 
 const RELEASE_NEWS = [
+  { version: '1.0.9', title: 'Cinematic Studio Capture Update', summary: 'Minecraft recording now detects the game window automatically, mixes game and microphone audio, and supports configurable hotkeys.', items: ['Minecraft windows are selected automatically by the Electron capture handler.', 'Game audio and microphone input can be enabled independently and mixed into one WebM track.', 'F9 records, F7 pauses, F8 adds a scene marker and F10 stops by default; every key can be rebound.'] },
   {
     version: '0.9.69',
     title: 'Universal Minecraft Versions',
@@ -1653,10 +1654,10 @@ function configureMinecraftCapture() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 } });
-      const minecraft = sources.find(source => /minecraft/i.test(String(source.name || '')));
+      const minecraft = sources.find(source => /minecraft/i.test(String(source.name || ''))) || sources.find(source => /lunar|badlion|fabric|forge/i.test(String(source.name || '')));
       callback(minecraft ? { video: minecraft, audio: 'loopback' } : {});
     } catch (_) { callback({}); }
-  }, { useSystemPicker: true });
+  });
 }
 
 const videoRecordingSessions = new Map();
@@ -1790,6 +1791,7 @@ ipcMain.handle('download-mod', async (_event, version, mod) => { try { const res
 ipcMain.handle('install-mod-project', async (_event, projectId, version) => { try { const result = await installModrinthProject(projectId, version); const count = result.installed.length + result.present.length; send('status', { type: 'success', message: `${count} mod file(s) provided for Minecraft ${result.version}.` }); if (result.conflicts.length) send('log', `Note: possible incompatible Modrinth projects: ${result.conflicts.join(', ')}`); if (result.missing.length) send('log', `Skipped (no matching version): ${result.missing.join(', ')}`); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
 ipcMain.handle('search-resource-packs', async (_event, query, version, page = 0) => { try { return { ok: true, ...await searchResourcePacks(query, version, page) }; } catch (error) { return { ok: false, results: [], page: 0, total: 0, hasNext: false, error: error.message }; } });
 ipcMain.handle('download-resource-pack', async (_event, version, pack) => { try { const result = await downloadResourcePack(version, pack); send('status', { type: 'success', message: `${result.fileName} was added to the resource packs of Minecraft ${result.version}.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
+ipcMain.handle('find-minecraft-window', async () => { try { const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 }, fetchWindowIcons: false }); const minecraft = sources.find(source => /minecraft/i.test(String(source.name || ''))) || sources.find(source => /lunar|badlion|fabric|forge/i.test(String(source.name || ''))); return minecraft ? { ok: true, id: minecraft.id, name: minecraft.name } : { ok: false, error: 'Minecraft window was not found. Start Minecraft first and keep its window open.' }; } catch (error) { return { ok: false, error: error.message || 'Minecraft window detection failed.' }; } });
 ipcMain.handle('start-video-recording', async (_event, title = 'minecraft-clip') => {
   try {
     const safeTitle = String(title || 'minecraft-clip').trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 64) || 'minecraft-clip';
