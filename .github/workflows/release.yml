@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.7 · Instance Health Center
+          ### Vortex Client 1.0.8 · Premium UI refresh
           - Installierte Modpacks öffnen jetzt einen übersichtlichen Pack-Workspace mit Live-Statistik für Mods, aktive Mods und deaktivierte Mods.
           - Die Modverwaltung ist klarer aufgebaut: kompatible Modrinth-Mods werden direkt im ausgewählten Pack gesucht und mit einer eigenen Pack-Aktion hinzugefügt.
           - Einzelne Modkarten bieten direkte Aktionen zum Aktivieren, Deaktivieren und Entfernen, ohne andere Instanzen zu verändern.
