@@ -31,11 +31,11 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Abgestimmte Account-Auswahl
-          - Die Account-Auswahl verwendet jetzt dieselbe neutrale Anthrazitpalette wie der übrige Launcher.
-          - Gedämpfte Cyan-Akzente ersetzen die bisher dominante Blautönung bei Rahmen, Avatar und Auswahlindikatoren.
-          - Kontraste für Nutzername, Accountanzahl, Menüeinträge und Hover-Zustände wurden für eine klarere Lesbarkeit verfeinert.
-          - Das Dropdown-Menü bleibt funktional unverändert und wirkt nun ruhiger und konsistenter.
+          ### Farbliche Überarbeitung des Update-Fensters
+          - Das Update-Fenster verwendet nun die neutrale Anthrazitpalette des Launchers statt der bisherigen dunkelblauen Oberfläche.
+          - Gedämpfte Cyan-Akzente heben Update-Symbol, Fortschritt und primäre Aktion klar hervor.
+          - Texte, Hinweise und sekundäre Aktionen wurden kontrastreicher und konsistenter abgestimmt.
+          - Der Ablauf für Download, Installation und Neustart bleibt unverändert.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
@@ -43,7 +43,7 @@ jobs:
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
 
           ### Hinweis
-          Die gespeicherten Microsoft- und Minecraft-Accounts bleiben vollständig erhalten.
+          Deine Instanzen, Mods, Accounts und Einstellungen bleiben beim Update erhalten.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
