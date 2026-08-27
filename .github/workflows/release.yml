@@ -31,11 +31,11 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Verbesserte Instanzauswahl
-          - Die Auswahl der aktiven Minecraft-Instanz wurde vollständig überarbeitet und klarer gegliedert.
-          - Die gespeicherte Version ist jetzt als primäre Auswahl hervorgehoben; andere Releases können separat und gezielt gestartet werden.
-          - Neue Feldbeschriftungen, ein kompakter Hilfetext und ein sichtbarer Fabric-/Vortex-Status erleichtern die Orientierung.
-          - Fokus-, Hover- und Statuszustände wurden für eine ruhigere, hochwertigere Bedienung verfeinert.
+          ### Abgestimmte Account-Auswahl
+          - Die Account-Auswahl verwendet jetzt dieselbe neutrale Anthrazitpalette wie der übrige Launcher.
+          - Gedämpfte Cyan-Akzente ersetzen die bisher dominante Blautönung bei Rahmen, Avatar und Auswahlindikatoren.
+          - Kontraste für Nutzername, Accountanzahl, Menüeinträge und Hover-Zustände wurden für eine klarere Lesbarkeit verfeinert.
+          - Das Dropdown-Menü bleibt funktional unverändert und wirkt nun ruhiger und konsistenter.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
@@ -43,7 +43,7 @@ jobs:
           3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
 
           ### Hinweis
-          Die Versionsauswahl, manuelle Eingabe und der Instanzstatus funktionieren weiterhin wie bisher.
+          Die gespeicherten Microsoft- und Minecraft-Accounts bleiben vollständig erhalten.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
