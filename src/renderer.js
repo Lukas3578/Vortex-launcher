@@ -488,3 +488,26 @@ const previousOpenModpacksPage = openModpacksPage; openModpacksPage = function()
   $('closeModpackDetailBtn')?.addEventListener('click', closeModpackDetail);
   $('createModpackBtn')?.addEventListener('click', exportModpackPage);
 })();
+
+// Instance Health Center: a read-only preflight for the selected profile.
+function runInstanceHealthCheck() {
+  const version = launcherState?.versions?.find(item => item.version === selectedVersion);
+  const checks = [];
+  if (!version) checks.push({ state: 'error', icon: '!', title: 'No active instance', detail: 'Choose a Minecraft version first.' });
+  else {
+    checks.push({ state: 'ok', icon: '✓', title: `Minecraft ${selectedVersion} selected`, detail: 'The active profile is ready for a local preflight.' });
+    checks.push({ state: version.fabricInstalled === false ? 'warn' : 'ok', icon: version.fabricInstalled === false ? '!' : '✓', title: version.fabricInstalled === false ? 'Fabric needs setup' : 'Fabric profile detected', detail: version.fabricInstalled === false ? 'Prepare the instance before launching.' : 'The Fabric loader is available for this profile.' });
+    const mods = Number(version.totalModCount || 0); const disabled = Number(version.disabledModCount || 0);
+    checks.push({ state: mods ? 'ok' : 'warn', icon: mods ? '✓' : '!', title: `${mods} mod${mods === 1 ? '' : 's'} installed`, detail: mods ? `${disabled} disabled · isolated to this instance.` : 'You can add compatible mods from the Mod Installer.' });
+    const java = Number(version.javaMajor || version.requiredJavaMajor || 0);
+    checks.push({ state: java >= 21 || !java ? 'ok' : 'warn', icon: java >= 21 || !java ? '✓' : '!', title: java ? `Java ${java} runtime signal` : 'Java runtime selected automatically', detail: java >= 21 || !java ? 'No immediate runtime warning detected.' : 'Prepare the instance to download a compatible runtime.' });
+  }
+  const score = checks.length ? Math.round(checks.filter(check => check.state === 'ok').length / checks.length * 100) : 0;
+  const ring = $('healthScoreRing'); const title = $('healthScoreTitle'); const text = $('healthScoreText'); const list = $('healthCheckList');
+  if (ring) { ring.textContent = `${score}%`; ring.dataset.state = checks.some(check => check.state === 'error') ? 'error' : checks.some(check => check.state === 'warn') ? 'warn' : 'ok'; }
+  if (title) title.textContent = score === 100 ? 'All systems ready' : score >= 50 ? 'Ready with notes' : 'Action recommended';
+  if (text) text.textContent = `${checks.filter(check => check.state === 'ok').length}/${checks.length} local checks passed for ${selectedVersion || 'the selected profile'}.`;
+  if (list) list.innerHTML = checks.map(check => `<div class="health-check-item ${check.state}"><span>${check.icon}</span><div><strong>${escapeHtml(check.title)}</strong><small>${escapeHtml(check.detail)}</small></div></div>`).join('');
+  addLog(`Health scan completed for ${selectedVersion || 'no instance'}.`, score === 100 ? 'success' : 'info');
+}
+$('runHealthCheckBtn')?.addEventListener('click', runInstanceHealthCheck);
