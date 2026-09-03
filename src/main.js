@@ -1769,26 +1769,28 @@ function copyImportedModFiles(version, sourceFiles, source, details = {}) {
   }
   return { ok: true, version: normalized, imported, skipped, source: sourceLabelFor(source) };
 }
-function transferVersionContent(sourceVersion, targetVersion) {
+async function transferVersionContent(sourceVersion, targetVersion) {
   const source = sanitizeVersion(sourceVersion); const target = sanitizeVersion(targetVersion);
   if (!source || !target) throw new Error('Select a valid source and target Minecraft version.');
   if (source === target) throw new Error('Source and target version must be different.');
-  const sourceMods = modsRoot(source); const targetMods = modsRoot(target); const sourcePacks = resourcePacksRoot(source); const targetPacks = resourcePacksRoot(target);
-  ensureDir(targetMods); ensureDir(targetPacks);
-  const skipped = []; const mods = []; const resourcePacks = []; const protectedNames = mandatoryModNames(source);
-  const copyFile = (from, to, label, maxBytes) => { if (exists(to)) { skipped.push(`${label}: already exists`); return false; } const stat = fs.statSync(from); if (!stat.isFile() || stat.size > maxBytes) { skipped.push(`${label}: too large or invalid`); return false; } fs.copyFileSync(from, to, fs.constants.COPYFILE_EXCL); return true; };
+  const sourceMods = modsRoot(source); const targetPacks = resourcePacksRoot(target); const sourcePacks = resourcePacksRoot(source);
+  ensureDir(modsRoot(target)); ensureDir(targetPacks);
+  const skipped = []; const mods = []; const resourcePacks = []; const unresolvedMods = [];
   if (exists(sourceMods)) for (const entry of fs.readdirSync(sourceMods, { withFileTypes: true })) {
     if (!entry.isFile() || !/\.jar(?:\.disabled)?$/i.test(entry.name)) continue;
-    if (protectedNames.has(entry.name.replace(/\.disabled$/i, ''))) { skipped.push(`${entry.name}: Vortex core kept version-specific`); continue; }
-    if (copyFile(path.join(sourceMods, entry.name), path.join(targetMods, entry.name), entry.name, 100 * 1024 * 1024)) mods.push(entry.name);
+    const baseName = entry.name.replace(/\.disabled$/i, '');
+    if (mandatoryModNames(source).has(baseName)) { skipped.push(`${entry.name}: Vortex core kept version-specific`); continue; }
+    const mapped = await mapInstalledModrinthFile(source, entry.name);
+    if (!mapped?.projectId) { unresolvedMods.push(entry.name); skipped.push(`${entry.name}: no Modrinth project mapping`); continue; }
+    try {
+      const result = await installModrinthProject(mapped.projectId, target);
+      if (result?.installed?.length || result?.present?.length) mods.push({ source: entry.name, projectId: mapped.projectId, installed: result.installed || [], present: result.present || [] });
+      else { unresolvedMods.push(entry.name); skipped.push(`${entry.name}: no compatible ${target} version`); }
+    } catch (_) { unresolvedMods.push(entry.name); skipped.push(`${entry.name}: no compatible ${target} version`); }
   }
-  if (exists(sourcePacks)) for (const entry of fs.readdirSync(sourcePacks, { withFileTypes: true })) {
-    if (!entry.isFile() && !entry.isDirectory()) continue;
-    const from = path.join(sourcePacks, entry.name); const to = path.join(targetPacks, entry.name); if (exists(to)) { skipped.push(`${entry.name}: already exists`); continue; }
-    if (entry.isFile()) { if (copyFile(from, to, entry.name, 500 * 1024 * 1024)) resourcePacks.push(entry.name); }
-    else { fs.cpSync(from, to, { recursive: true, errorOnExist: true, force: false }); resourcePacks.push(entry.name); }
-  }
-  return { ok: true, source, target, mods, resourcePacks, skipped };
+  const copyPack = (from, to, label) => { if (exists(to)) { skipped.push(`${label}: already exists`); return false; } const stat = fs.statSync(from); if (stat.isFile() && stat.size > 500 * 1024 * 1024) { skipped.push(`${label}: too large`); return false; } fs.cpSync(from, to, { recursive: true, errorOnExist: true, force: false }); return true; };
+  if (exists(sourcePacks)) for (const entry of fs.readdirSync(sourcePacks, { withFileTypes: true })) { if (!entry.isFile() && !entry.isDirectory()) continue; if (copyPack(path.join(sourcePacks, entry.name), path.join(targetPacks, entry.name), entry.name)) resourcePacks.push(entry.name); }
+  return { ok: true, source, target, mods, resourcePacks, unresolvedMods, skipped };
 }
 
 async function importExternalModFiles(version) {
@@ -1809,7 +1811,7 @@ async function transferModrinthProfileMods(version) {
   const result = copyImportedModFiles(version, files, 'modrinth-profile', { profileName, label: `Modrinth profile · ${profileName}` });
   return { ...result, profileName };
 }
-ipcMain.handle('transfer-version-content', async (_event, sourceVersion, targetVersion) => { try { const result = transferVersionContent(sourceVersion, targetVersion); send('status', { type: 'success', message: `${result.mods.length} mod(s) and ${result.resourcePacks.length} resource pack(s) transferred from ${result.source} to ${result.target}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
+ipcMain.handle('transfer-version-content', async (_event, sourceVersion, targetVersion) => { try { const result = await transferVersionContent(sourceVersion, targetVersion); send('status', { type: 'success', message: `${result.mods.length} mod(s) and ${result.resourcePacks.length} resource pack(s) transferred from ${result.source} to ${result.target}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('import-external-mod-files', async (_event, version) => { try { const result = await importExternalModFiles(version); if (result.ok) send('status', { type: 'success', message: `${result.imported.length} external mod file(s) added to Minecraft ${result.version}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('transfer-modrinth-profile', async (_event, version) => { try { const result = await transferModrinthProfileMods(version); if (result.ok) send('status', { type: 'success', message: `${result.imported.length} mod(s) transferred from ${result.profileName}.` }); return result; } catch (error) { return { ok: false, error: error.message }; } });
 ipcMain.handle('download-mod', async (_event, version, mod) => { try { const result = await downloadModrinthMod(version, mod); send('status', { type: 'success', message: `${result.fileName} was added to the Minecraft ${result.version} instance.` }); return result; } catch (error) { send('status', { type: 'error', message: error.message }); return { ok: false, error: error.message }; } });
