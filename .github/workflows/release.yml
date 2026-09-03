@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.9 · Cinematic Studio Capture Update
+          ### Vortex Client 1.0.11 · Cinematic Studio Capture Update
           - Minecraft-Fenster werden bei der Aufnahme automatisch erkannt und durch den Electron-Capture-Handler bevorzugt ausgewählt.
           - Game-Audio und Mikrofon lassen sich unabhängig aktivieren und werden bei Bedarf in einen gemeinsamen WebM-Audiostream gemischt.
           - F9 startet/stoppt, F7 pausiert/fortsetzt, F8 setzt einen Szenenmarker und F10 stoppt; jede Funktionstaste kann frei neu belegt werden.
@@ -51,7 +51,7 @@ jobs:
 
           ### Update
           - Für automatische Updates stehen `latest.yml` und die passende `.blockmap` bereit.
-          - Die Version 1.0.9 wird als Windows-Installer veröffentlicht.
+          - Die Version 1.0.11 wird als Windows-Installer veröffentlicht.
 
           ### Installation
           1. Den Windows-Installer aus diesem Release herunterladen.
