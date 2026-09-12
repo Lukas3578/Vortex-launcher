@@ -1104,6 +1104,13 @@ async function minecraftAvatarData(value) {
   } catch (_) { return null; }
 }
 async function accountAvatar(value) { return dataUriForImage(profileImagePath(value)) || minecraftAvatarData(value); }
+async function refreshSavedAccountsOnStartup() {
+  const saved = [...accounts];
+  for (const entry of saved) {
+    try { await refreshMinecraftAuthorization(entry, { interactive: false }); } catch (_) { /* Keep the saved account visible while offline or while Microsoft services recover. */ }
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('accounts-updated', { account: account ? accountSummary(account) : null, accounts: accountSummaries() });
+}
 function saveAccounts() { const activeAccountId = account ? accountId(account) : null; writeJson(accountFile, { schemaVersion: 2, activeAccountId, accounts }); }
 function loadAccount() {
   const stored = loadJson(accountFile, null);
@@ -1154,10 +1161,11 @@ async function validateMinecraftAccessToken(auth) {
     return true;
   }
 }
-async function refreshMinecraftAuthorization(savedAccount) {
+async function refreshMinecraftAuthorization(savedAccount, { interactive = true } = {}) {
   const previous = savedAccount?.auth;
   const refreshToken = previous?.meta?.refresh;
   if (!previous?.access_token || !refreshToken) {
+    if (!interactive) return previous || null;
     send('status', { type: 'info', message: 'Your saved Minecraft session needs a one-time reauthentication …' });
     return (await signInToMinecraft()).auth;
   }
@@ -1170,6 +1178,7 @@ async function refreshMinecraftAuthorization(savedAccount) {
     const refreshedAccount = { ...savedAccount, username: profile.name || savedAccount.username, uuid: profile.id || savedAccount.uuid, auth: refreshedAuth };
     updateAccountSession(refreshedAccount);
     if (!(await validateMinecraftAccessToken(refreshedAuth))) {
+      if (!interactive) return refreshedAuth;
       send('status', { type: 'info', message: 'The saved Minecraft session is invalid. Please sign in again …' });
       return (await signInToMinecraft()).auth;
     }
@@ -1692,6 +1701,7 @@ app.whenReady().then(() => {
   configureMinecraftCapture();
   createWindow();
   registerCinematicHotkeys();
+  void refreshSavedAccountsOnStartup();
   startInstanceMaintenance();
   startBackgroundUpdateChecks();
 });
