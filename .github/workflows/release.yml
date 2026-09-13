@@ -31,35 +31,22 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.17 · Cinematic Studio Capture Update
-          - Minecraft-Fenster werden bei der Aufnahme automatisch erkannt und durch den Electron-Capture-Handler bevorzugt ausgewählt.
-          - Game-Audio und Mikrofon lassen sich unabhängig aktivieren und werden bei Bedarf in einen gemeinsamen WebM-Audiostream gemischt.
-          - F9 startet/stoppt, F7 pausiert/fortsetzt, F8 setzt einen Szenenmarker und F10 stoppt; jede Funktionstaste kann frei neu belegt werden.
+          ### Vortex Client 1.0.18 · Deep Navy UI Update
+          - Das gesamte Interface folgt jetzt dem dunklen Vortex-Navy-Stil mit Cyan- und Blau-Akzenten.
+          - Control Center, Aktionskarten, Versionsauswahl, Eingabefelder, Statuskarten und rechte Informationsbereiche wurden vollständig vereinheitlicht.
+          - Graue Flächen und blasse Übergänge wurden durch tiefe Navy-Flächen, klare Cyan-Kanten und dezente blaue Leuchteffekte ersetzt.
+          - Account-Menü, Sidebar, Mod-/Resource-Pack-Karten, Instanzen, Server, Community, Update-Fenster und Cinematic Studio nutzen jetzt dasselbe visuelle System.
+          - Hover-, Fokus- und aktive Zustände sind klarer sichtbar und bleiben auch bei längeren Listen und Formularen konsistent.
 
-          ### Modpack Workspace und Premium UI
-          - Installierte Modpacks öffnen jetzt einen übersichtlichen Pack-Workspace mit Live-Statistik für Mods, aktive Mods und deaktivierte Mods.
-          - Die Modverwaltung ist klarer aufgebaut: kompatible Modrinth-Mods werden direkt im ausgewählten Pack gesucht und mit einer eigenen Pack-Aktion hinzugefügt.
-          - Einzelne Modkarten bieten direkte Aktionen zum Aktivieren, Deaktivieren und Entfernen, ohne andere Instanzen zu verändern.
-          - Der neue Builder unterstützt einen eigenen Pack-Namen, eine Kurzbeschreibung und eine frei wählbare Pack-Version.
-          - Eigene Inhalte lassen sich über `Build & export .mrpack` als portables Modrinth-Pack exportieren.
+          ### Launcher-Funktionen
+          - Microsoft-Konten werden beim Start geladen und gespeicherte Sitzungen still im Hintergrund aktualisiert.
+          - Der Start-Ladebildschirm zeigt jetzt verständlich, wann Accounts, Instanzen und Dienste geladen werden.
+          - Der Versions-Transfer kann Mods für die Zielversion neu über Modrinth auflösen und Resource Packs getrennt übernehmen.
+          - Cinematic Studio unterstützt Minecraft-Autoerkennung, Spielaudio, Mikrofon-Mixing und globale Hotkeys.
 
-          ### Stabilität und Bedienung
-          - Der Vortex-Core bleibt geschützt und kann nicht versehentlich aus einem Modpack entfernt oder deaktiviert werden.
-          - Alle Modpack-Aktionen bleiben auf den jeweiligen isolierten Pack-Ordner begrenzt.
-          - Der Minecraft- und Java-Kompatibilitätsfix aus 1.0.4 bleibt vollständig enthalten.
-          - Bestehende Instanzen, Mods, Accounts, Server, Modpacks und Aufnahmen bleiben erhalten.
-
-          ### Update
-          - Für automatische Updates stehen `latest.yml` und die passende `.blockmap` bereit.
-          - Die Version 1.0.17 wird als Windows-Installer veröffentlicht.
-
-          ### Installation
-          1. Den Windows-Installer aus diesem Release herunterladen.
-          2. Die vorherige Launcher-Version schließen und den Installer ausführen.
-          3. Minecraft anschließend ausschließlich über **Launch Vortex** starten.
-
-          ### Hinweis
-          Die vorhandenen Instanzen, Mods, Accounts und Einstellungen bleiben unverändert erhalten.
+          ### Stabilität
+          - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.
+          - Die Windows-Version wird mit automatischem Update über `latest.yml` und Blockmap ausgeliefert.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
