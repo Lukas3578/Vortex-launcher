@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('vortex', {
   downloadCommunitySkin: (shareCode) => ipcRenderer.invoke('community-download-skin', shareCode),
   searchMods: (query, version, page) => ipcRenderer.invoke('search-mods', query, version, page),
   searchResourcePacks: (query, version, page) => ipcRenderer.invoke('search-resource-packs', query, version, page),
+  searchFreeMusic: (query, page) => ipcRenderer.invoke('search-free-music', query, page),
   searchModpacks: (query, version, page) => ipcRenderer.invoke('search-modpacks', query, version, page),
   downloadModpack: (version, pack) => ipcRenderer.invoke('download-modpack', version, pack),
   importMrpack: (version) => ipcRenderer.invoke('import-mrpack', version),
