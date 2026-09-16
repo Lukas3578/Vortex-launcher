@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.22 · Deep Navy UI Update
+          ### Vortex Client 1.0.23 · Deep Navy UI Update
           - Das gesamte Interface folgt jetzt dem dunklen Vortex-Navy-Stil mit Cyan- und Blau-Akzenten.
           - Control Center, Aktionskarten, Versionsauswahl, Eingabefelder, Statuskarten und rechte Informationsbereiche wurden vollständig vereinheitlicht.
           - Graue Flächen und blasse Übergänge wurden durch tiefe Navy-Flächen, klare Cyan-Kanten und dezente blaue Leuchteffekte ersetzt.

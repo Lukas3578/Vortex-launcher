@@ -466,6 +466,9 @@ addLog('Vortex Client Launcher ready.'); void updateBuildVersion(); refresh().th
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
   }));
   document.addEventListener('keydown', event => {
+    const target = event.target;
+    const isEditable = target instanceof HTMLElement && (target.matches('input, textarea, select, [contenteditable="true"]') || target.closest('input, textarea, select, [contenteditable="true"]'));
+    if (isEditable) return;
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'r') { event.preventDefault(); void refresh(); }
   });
 })();
