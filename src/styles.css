@@ -282,3 +282,18 @@ html,body{background:#050a12;color:#edfaff}body{background:radial-gradient(ellip
 .command-overlay:not([hidden]), .news-modal:not([hidden]), .update-modal:not([hidden]) { pointer-events: auto; }
 input:disabled, textarea:disabled, select:disabled { pointer-events: none !important; }
 input.hotkey-input { user-select: none !important; -webkit-user-select: none !important; }
+
+/* Final category audit: remove remaining gray/olive legacy surfaces. */
+.cinematic-audio-options .toggle-option, .cinematic-hotkeys, .version-transfer-panel { background:linear-gradient(145deg,#0b2136,#061321)!important; border-color:rgba(76,202,249,.3)!important; color:#dff8ff!important; }
+.cinematic-audio-options .toggle-option span, .cinematic-hotkeys label, .version-transfer-panel h3, .version-transfer-panel p, .version-transfer-fields label { color:#a9e9f7!important; }
+.version-transfer-fields select { background:linear-gradient(145deg,#09233b,#061627)!important; border-color:rgba(81,208,255,.4)!important; color:#eafaff!important; }
+.version-transfer-fields input { background:#061627!important; border-color:rgba(77,192,239,.38)!important; color:#eafaff!important; }
+
+/* Server cards and native dropdown final dark-mode pass. */
+.server-list,.server-library-panel,.server-add-panel,.official-server-hero,.live-server-data{background:linear-gradient(145deg,#081b2e,#05111f)!important;border-color:rgba(73,199,248,.32)!important;color:#eafaff!important;}
+.server-card,.server-list .server-card,.live-server-card,.server-tile,[class*="server-card"]{background:linear-gradient(145deg,#0b263f 0%,#071625 100%)!important;background-color:#071625!important;border:1px solid rgba(70,188,239,.3)!important;color:#eafaff!important;box-shadow:0 12px 28px rgba(0,0,0,.22),inset 0 1px rgba(137,235,255,.04)!important;}
+.server-card:hover,.server-list .server-card:hover,.live-server-card:hover,.server-tile:hover,[class*="server-card"]:hover{background:linear-gradient(145deg,#103a5d,#0a213a)!important;border-color:#58e8ff!important;}
+.server-card p,.server-card small,.server-card span,.server-tile p,.server-tile small{color:#9cc1d1!important;}
+select,select:hover,select:focus,.version-card select,.library-toolbar select,.version-transfer-fields select{color-scheme:dark!important;background:#061729!important;color:#eafaff!important;border-color:rgba(81,208,255,.48)!important;}
+select option,select optgroup{background:#071b2d!important;background-color:#071b2d!important;color:#eafaff!important;}
+select option:checked,select option:hover{background:#104b73!important;background-color:#104b73!important;color:#f2fdff!important;}
