@@ -354,16 +354,21 @@ async function uploadCommunityPreset() { if (!launcherState?.community?.websiteA
 function setupVortexHub() {
   if (document.body.dataset.vortexHubReady === 'true') return;
   document.body.dataset.vortexHubReady = 'true';
-  const worldName = $('hostWorldName'); const port = $('hostPort'); const hostStatus = $('hostSessionStatus');
+  const worldName = $('hostWorldName'); const port = $('hostPort'); const hostStatus = $('hostSessionStatus'); const addressValue = $('hostAddressValue'); const addressNote = $('hostAddressNote'); let hostAddress = '';
+  const detectHostAddress = async () => { const result = await window.vortex.getHostNetworkInfo?.(); hostAddress = result?.address ? `${result.address}:${String(port?.value || '25565').replace(/[^0-9]/g, '') || '25565'}` : ''; if (addressValue) addressValue.textContent = hostAddress || 'No LAN address found'; if (addressNote) addressNote.textContent = result?.note || 'Connect to a network and try again.'; return result; };
   const saved = (() => { try { return JSON.parse(localStorage.getItem('vortex.hostSession') || '{}'); } catch (_) { return {}; } })();
   if (worldName && saved.worldName) worldName.value = saved.worldName;
   if (port && saved.port) port.value = saved.port;
   if (hostStatus && saved.worldName) hostStatus.textContent = `Saved setup: ${saved.worldName} · port ${saved.port || '25565'}`;
+  void detectHostAddress();
+  $('detectHostAddressBtn')?.addEventListener('click', async () => { const result = await detectHostAddress(); if (hostStatus) hostStatus.textContent = result?.address ? `LAN address ready: ${hostAddress}` : 'No active LAN address found.'; });
+  $('copyHostAddressBtn')?.addEventListener('click', async () => { if (!hostAddress) await detectHostAddress(); if (!hostAddress) return; try { await navigator.clipboard.writeText(hostAddress); if (hostStatus) hostStatus.textContent = `Copied ${hostAddress}. Open your world to LAN in Minecraft first.`; addLog(`Copied host address ${hostAddress}.`, 'success'); } catch (_) { if (hostStatus) hostStatus.textContent = `Copy failed. Your address is ${hostAddress}`; } });
+  port?.addEventListener('input', () => { void detectHostAddress(); });
   $('prepareFriendsSessionBtn')?.addEventListener('click', () => { showPage('hub'); worldName?.focus(); hostStatus?.scrollIntoView({ behavior: 'smooth', block: 'center' }); addLog('Friends session setup is ready. Open your world to LAN inside Minecraft after launch.', 'info'); });
   $('saveHostSessionBtn')?.addEventListener('click', () => {
     const name = (worldName?.value || '').trim() || 'My Vortex World'; const selectedPort = String(port?.value || '25565').replace(/[^0-9]/g, '').slice(0, 5) || '25565';
     if (Number(selectedPort) < 1024 || Number(selectedPort) > 65535) { if (hostStatus) hostStatus.textContent = 'Choose a port between 1024 and 65535.'; return; }
-    localStorage.setItem('vortex.hostSession', JSON.stringify({ worldName: name, port: selectedPort, version: selectedVersion, savedAt: Date.now() })); if (worldName) worldName.value = name; if (port) port.value = selectedPort; if (hostStatus) hostStatus.textContent = `Saved setup: ${name} · port ${selectedPort} · Minecraft ${selectedVersion}`; addLog(`Saved friends session '${name}' for Minecraft ${selectedVersion}.`, 'success');
+    localStorage.setItem('vortex.hostSession', JSON.stringify({ worldName: name, port: selectedPort, address: hostAddress, version: selectedVersion, savedAt: Date.now() })); if (worldName) worldName.value = name; if (port) port.value = selectedPort; if (hostStatus) hostStatus.textContent = hostAddress ? `Saved setup: ${name} · ${hostAddress} · Minecraft ${selectedVersion}` : `Saved setup: ${name} · port ${selectedPort} · Minecraft ${selectedVersion}`; addLog(`Saved friends session '${name}' for Minecraft ${selectedVersion}.`, 'success');
   });
   $('openHubModsBtn')?.addEventListener('click', () => showPage('mods'));
   $('saveFriendServerBtn')?.addEventListener('click', async () => {

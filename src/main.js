@@ -2,6 +2,7 @@ const { app, BrowserWindow, desktopCapturer, globalShortcut, ipcMain, dialog, sh
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
 const { Auth, tokenUtils } = require('msmc');
@@ -47,6 +48,13 @@ const modImagesRoot = path.join(dataRoot, 'mod-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
 
 const OFFICIAL_SERVER = Object.freeze({ id: 'official-vortexpvp', name: 'VortexPvP', address: 'mc.vortexpvp.eu', official: true });
+
+function getHostNetworkInfo() {
+  const interfaces = os.networkInterfaces();
+  const addresses = Object.entries(interfaces).flatMap(([name, records]) => (records || []).filter(record => record.family === 'IPv4' && !record.internal).map(record => ({ name, address: record.address })));
+  const preferred = addresses.find(item => /wi-?fi|wlan|wireless/i.test(item.name)) || addresses.find(item => /ethernet|en\d|eth\d/i.test(item.name)) || addresses[0] || null;
+  return { ok: Boolean(preferred), address: preferred?.address || null, addresses, note: preferred ? 'LAN address on this computer. Friends must be on the same network unless port forwarding or a trusted tunnel is configured.' : 'No active local network adapter was detected.' };
+}
 
 const RELEASE_NEWS = [
   { version: '1.0.9', title: 'Cinematic Studio Capture Update', summary: 'Minecraft recording now detects the game window automatically, mixes game and microphone audio, and supports configurable hotkeys.', items: ['Minecraft windows are selected automatically by the Electron capture handler.', 'Game audio and microphone input can be enabled independently and mixed into one WebM track.', 'F9 records, F7 pauses, F8 adds a scene marker and F10 stops by default; every key can be rebound.'] },
@@ -1715,6 +1723,7 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: availableMinecraftVersions().map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
+ipcMain.handle('get-host-network-info', () => getHostNetworkInfo());
 ipcMain.handle('toggle-fullscreen', () => { if (!mainWindow) return false; const next = !mainWindow.isFullScreen(); mainWindow.setFullScreen(next); return next; });
 ipcMain.handle('is-fullscreen', () => Boolean(mainWindow?.isFullScreen()));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
