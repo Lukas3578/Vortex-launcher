@@ -31,11 +31,11 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.23 · Deep Navy UI Update
+          ### Vortex Client 1.0.25 · 26.2 Content Refresh
           - Das gesamte Interface folgt jetzt dem dunklen Vortex-Navy-Stil mit Cyan- und Blau-Akzenten.
           - Control Center, Aktionskarten, Versionsauswahl, Eingabefelder, Statuskarten und rechte Informationsbereiche wurden vollständig vereinheitlicht.
           - Graue Flächen und blasse Übergänge wurden durch tiefe Navy-Flächen, klare Cyan-Kanten und dezente blaue Leuchteffekte ersetzt.
-          - Account-Menü, Sidebar, Mod-/Resource-Pack-Karten, Instanzen, Server, Community, Update-Fenster und Cinematic Studio nutzen jetzt dasselbe visuelle System.
+          - Account-Menü, Sidebar, Mod-/Resource-Pack-Karten, Instanzen, Server, Community und Update-Fenster nutzen jetzt dasselbe visuelle System.
           - Hover-, Fokus- und aktive Zustände sind klarer sichtbar und bleiben auch bei längeren Listen und Formularen konsistent.
 
           ### Launcher-Funktionen
@@ -44,7 +44,8 @@ jobs:
           - Microsoft-Konten werden beim Start geladen und gespeicherte Sitzungen still im Hintergrund aktualisiert.
           - Der Start-Ladebildschirm zeigt jetzt verständlich, wann Accounts, Instanzen und Dienste geladen werden.
           - Der Versions-Transfer kann Mods für die Zielversion neu über Modrinth auflösen und Resource Packs getrennt übernehmen.
-          - Cinematic Studio unterstützt Minecraft-Autoerkennung, Spielaudio, Mikrofon-Mixing und globale Hotkeys.
+          - Das 26.2-Modpack enthält die aktualisierten Vortex-Komponenten Vortex Client 3.4.0 und Vortex Plus 2.8.0.
+          - Das Vortex Music Center unterstützt lokale und freie Internet-Musik mit Wiedergabe-Steuerung.
 
           ### Stabilität
           - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.
