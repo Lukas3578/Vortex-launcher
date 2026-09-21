@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.25 · 26.2 Content Refresh
+          ### Vortex Client 1.0.26 · Vortex Hub & Mod-Themed UI
           - Das gesamte Interface folgt jetzt dem dunklen Vortex-Navy-Stil mit Cyan- und Blau-Akzenten.
           - Control Center, Aktionskarten, Versionsauswahl, Eingabefelder, Statuskarten und rechte Informationsbereiche wurden vollständig vereinheitlicht.
           - Graue Flächen und blasse Übergänge wurden durch tiefe Navy-Flächen, klare Cyan-Kanten und dezente blaue Leuchteffekte ersetzt.
@@ -46,6 +46,8 @@ jobs:
           - Der Versions-Transfer kann Mods für die Zielversion neu über Modrinth auflösen und Resource Packs getrennt übernehmen.
           - Das 26.2-Modpack enthält die aktualisierten Vortex-Komponenten Vortex Client 3.4.0 und Vortex Plus 2.8.0.
           - Das Vortex Music Center unterstützt lokale und freie Internet-Musik mit Wiedergabe-Steuerung.
+          - Der neue Vortex Hub bereitet Friends-Sessions, LAN-Hosting und Server-Adressen vor.
+          - Launcher-Oberflächen nutzen jetzt das violett-blaue Vortex-Mod-Design mit Pixel-Details und Void-Glow.
 
           ### Stabilität
           - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.
