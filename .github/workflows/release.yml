@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.28 · Classic UI + Host Address Detection
+          ### Vortex Client 1.0.29 · Real Local Server Hosting
           - Das gesamte Interface folgt jetzt dem dunklen Vortex-Navy-Stil mit Cyan- und Blau-Akzenten.
           - Control Center, Aktionskarten, Versionsauswahl, Eingabefelder, Statuskarten und rechte Informationsbereiche wurden vollständig vereinheitlicht.
           - Graue Flächen und blasse Übergänge wurden durch tiefe Navy-Flächen, klare Cyan-Kanten und dezente blaue Leuchteffekte ersetzt.
@@ -49,6 +49,8 @@ jobs:
           - Der neue Vortex Hub bereitet Friends-Sessions, LAN-Hosting und Server-Adressen vor.
           - Die Launcher-Oberfläche nutzt wieder das klassische Vortex-Design.
           - Der Vortex Hub erkennt jetzt die lokale LAN-IP und erzeugt eine kopierbare IP:Port-Adresse für Friends-Sessions.
+          - Der Host-Modus lädt den offiziellen Minecraft-Server automatisch herunter und startet ihn lokal.
+          - Serverstatus, Stop-Funktion und Direkt-Join sind jetzt im Vortex Hub verfügbar.
 
           ### Stabilität
           - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.

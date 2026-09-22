@@ -7,7 +7,8 @@ const { PNG } = require('pngjs');
 const { Client } = require('minecraft-launcher-core');
 const { Auth, tokenUtils } = require('msmc');
 const { autoUpdater } = require('electron-updater');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
+const net = require('net');
 const { promisify } = require('util');
 const { createAiStudio } = require('./ai-studio');
 const { getMinecraftServerStatus } = require('./minecraft-status');
@@ -34,6 +35,7 @@ const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 let lastMaintenance = { checkedAt: null, repairedVersions: [] };
 const serverStatusCache = new Map();
 const serverStatusPending = new Map();
+const hostedServers = new Map();
 const SERVER_STATUS_CACHE_MS = 90 * 1000;
 
 const dataRoot = path.join(app.getPath('appData'), 'Vortex Client');
@@ -43,6 +45,7 @@ const stateFile = path.join(dataRoot, 'launcher-state.json');
 const customVersionsFile = path.join(dataRoot, 'minecraft-versions.json');
 const newsFile = path.join(dataRoot, 'release-news.json');
 const serversFile = path.join(dataRoot, 'servers.json');
+const hostedServersRoot = path.join(dataRoot, 'hosted-servers');
 const profileImagesRoot = path.join(dataRoot, 'profile-images');
 const modImagesRoot = path.join(dataRoot, 'mod-images');
 const aiStudio = createAiStudio({ dataRoot, instanceRoot, supportedVersions: SUPPORTED_VERSIONS, safeStorage });
@@ -55,6 +58,61 @@ function getHostNetworkInfo() {
   const preferred = addresses.find(item => /wi-?fi|wlan|wireless/i.test(item.name)) || addresses.find(item => /ethernet|en\d|eth\d/i.test(item.name)) || addresses[0] || null;
   return { ok: Boolean(preferred), address: preferred?.address || null, addresses, note: preferred ? 'LAN address on this computer. Friends must be on the same network unless port forwarding or a trusted tunnel is configured.' : 'No active local network adapter was detected.' };
 }
+
+function hostedServerRoot(version) { return path.join(hostedServersRoot, sanitizeVersion(version) || 'unknown'); }
+async function minecraftServerDownload(version) {
+  const manifestResponse = await fetch('https://piston-meta.mojang.com/mc/game/version_manifest_v2.json', { signal: AbortSignal.timeout(30000) });
+  if (!manifestResponse.ok) throw new Error(`Minecraft version manifest could not be loaded (HTTP ${manifestResponse.status}).`);
+  const manifest = await manifestResponse.json(); const entry = (manifest.versions || []).find(item => item.id === version);
+  if (!entry?.url) throw new Error(`No official Minecraft server download exists for version ${version}.`);
+  const versionResponse = await fetch(entry.url, { signal: AbortSignal.timeout(30000) });
+  if (!versionResponse.ok) throw new Error(`Minecraft ${version} metadata could not be loaded.`);
+  const metadata = await versionResponse.json(); const serverUrl = metadata.downloads?.server?.url;
+  if (!serverUrl) throw new Error(`Minecraft ${version} does not publish an official server jar.`);
+  return { url: serverUrl, sha1: metadata.downloads.server.sha1 || null };
+}
+async function waitForPort(port, host = '127.0.0.1', timeoutMs = 90000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const open = await new Promise(resolve => { const socket = net.createConnection({ host, port }, () => { socket.destroy(); resolve(true); }); socket.on('error', () => { socket.destroy(); resolve(false); }); });
+    if (open) return true;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  return false;
+}
+async function startHostedServer(version, port, eulaAccepted) {
+  const normalized = sanitizeVersion(version); const selectedPort = Number(port || 25565);
+  if (!normalized) throw new Error('Select a valid Minecraft version.');
+  if (!eulaAccepted) throw new Error('Please accept the Minecraft EULA before starting a server.');
+  if (!Number.isInteger(selectedPort) || selectedPort < 1024 || selectedPort > 65535) throw new Error('Choose a port between 1024 and 65535.');
+  const existing = hostedServers.get(normalized); if (existing?.process && !existing.process.killed) return { ok: true, status: 'running', version: normalized, port: existing.port, address: `${getHostNetworkInfo().address || '127.0.0.1'}:${existing.port}` };
+  const root = hostedServerRoot(normalized); ensureDir(root);
+  const jarPath = path.join(root, 'server.jar');
+  if (!exists(jarPath) || fs.statSync(jarPath).size < 1000000) {
+    send('status', { type: 'info', message: `Downloading the official Minecraft ${normalized} server …` });
+    const download = await minecraftServerDownload(normalized); const response = await fetch(download.url, { signal: AbortSignal.timeout(300000) });
+    if (!response.ok) throw new Error(`Minecraft server download failed (HTTP ${response.status}).`);
+    const buffer = Buffer.from(await response.arrayBuffer()); if (buffer.length < 1000000) throw new Error('The downloaded server jar is invalid.');
+    if (download.sha1 && crypto.createHash('sha1').update(buffer).digest('hex') !== download.sha1) throw new Error('The downloaded server jar failed its checksum.');
+    fs.writeFileSync(jarPath, buffer);
+  }
+  fs.writeFileSync(path.join(root, 'eula.txt'), 'eula=true\n');
+  const propertiesPath = path.join(root, 'server.properties'); const existingProperties = exists(propertiesPath) ? fs.readFileSync(propertiesPath, 'utf8') : ''; const propertyLines = existingProperties.split(/\r?\n/).filter(line => !/^server-port=/.test(line) && !/^server-ip=/.test(line) && line.trim() !== ''); propertyLines.push(`server-port=${selectedPort}`, 'server-ip='); fs.writeFileSync(propertiesPath, `${propertyLines.join('\n')}\n`);
+  const javaPath = await javaPathForVersion(normalized);
+  const args = ['-Xms1G', '-Xmx4G', '-jar', jarPath, 'nogui'];
+  const child = spawn(javaPath, args, { cwd: root, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+  const hosted = { process: child, version: normalized, port: selectedPort, root, startedAt: new Date().toISOString(), ready: false };
+  hostedServers.set(normalized, hosted);
+  const capture = chunk => { const message = String(chunk || '').trim(); if (message) send('log', `[Server ${normalized}] ${message}`); };
+  child.stdout.on('data', capture); child.stderr.on('data', capture);
+  child.on('close', code => { hostedServers.delete(normalized); send('status', { type: 'info', message: `Hosted Minecraft ${normalized} server stopped (Code ${code}).` }); });
+  const ready = await waitForPort(selectedPort); hosted.ready = ready;
+  if (!ready) { try { child.kill(); } catch (_) {} hostedServers.delete(normalized); throw new Error('The Minecraft server did not open its port. Check the launcher log.'); }
+  const network = getHostNetworkInfo(); send('status', { type: 'success', message: `Minecraft ${normalized} server is online at ${network.address || '127.0.0.1'}:${selectedPort}.` });
+  return { ok: true, status: 'running', version: normalized, port: selectedPort, address: `${network.address || '127.0.0.1'}:${selectedPort}`, localAddress: `127.0.0.1:${selectedPort}`, root };
+}
+function stopHostedServer(version) { const normalized = sanitizeVersion(version); const hosted = hostedServers.get(normalized); if (!hosted) return { ok: true, status: 'stopped' }; try { hosted.process.stdin.write('stop\n'); } catch (_) { try { hosted.process.kill(); } catch (_) {} } hostedServers.delete(normalized); return { ok: true, status: 'stopping', version: normalized }; }
+function hostedServerStatus(version) { const normalized = sanitizeVersion(version); const hosted = hostedServers.get(normalized); if (!hosted) return { ok: true, status: 'stopped', version: normalized }; const network = getHostNetworkInfo(); return { ok: true, status: hosted.ready ? 'running' : 'starting', version: normalized, port: hosted.port, address: `${network.address || '127.0.0.1'}:${hosted.port}`, localAddress: `127.0.0.1:${hosted.port}`, startedAt: hosted.startedAt }; }
 
 const RELEASE_NEWS = [
   { version: '1.0.9', title: 'Cinematic Studio Capture Update', summary: 'Minecraft recording now detects the game window automatically, mixes game and microphone audio, and supports configurable hotkeys.', items: ['Minecraft windows are selected automatically by the Electron capture handler.', 'Game audio and microphone input can be enabled independently and mixed into one WebM track.', 'F9 records, F7 pauses, F8 adds a scene marker and F10 stops by default; every key can be rebound.'] },
@@ -1718,12 +1776,16 @@ app.whenReady().then(() => {
 app.on('before-quit', () => { globalShortcut.unregisterAll();
   if (instanceMaintenanceTimer) clearInterval(instanceMaintenanceTimer);
   if (updateCheckTimer) clearInterval(updateCheckTimer);
+  for (const hosted of hostedServers.values()) { try { hosted.process.stdin.write('stop\n'); } catch (_) { try { hosted.process.kill(); } catch (_) {} } }
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-state', async () => ({ account: account ? accountSummary(account) : null, accounts: accountSummaries(), state: loadState(), servers: serverSummaries(), versions: availableMinecraftVersions().map(getInstanceSummary), cosmeticsVersion: COSMETICS_MOD_VERSION, bedrock: await getBedrockState(), update: updateState, maintenance: lastMaintenance, news: unreadReleaseNews(), community: await getCommunityState() }));
 ipcMain.handle('get-host-network-info', () => getHostNetworkInfo());
+ipcMain.handle('start-hosted-server', async (_event, version, port, eulaAccepted) => { try { return await startHostedServer(version, port, Boolean(eulaAccepted)); } catch (error) { send('status', { type: 'error', message: `Server host failed: ${error.message}` }); return { ok: false, error: error.message }; } });
+ipcMain.handle('stop-hosted-server', (_event, version) => stopHostedServer(version));
+ipcMain.handle('hosted-server-status', (_event, version) => hostedServerStatus(version));
 ipcMain.handle('toggle-fullscreen', () => { if (!mainWindow) return false; const next = !mainWindow.isFullScreen(); mainWindow.setFullScreen(next); return next; });
 ipcMain.handle('is-fullscreen', () => Boolean(mainWindow?.isFullScreen()));
 ipcMain.handle('list-servers', () => ({ ok: true, servers: serverSummaries(), selectedServerId: loadState().selectedServerId }));
