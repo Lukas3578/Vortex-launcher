@@ -31,24 +31,24 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.30 · Visual Relaunch
-          - Komplett überarbeitetes Design: neue, tiefere Farbpalette mit Cyan-, Blau- und neuem Violett-Akzent für mehr visuelle Tiefe.
-          - Durchgehende Animationssprache: sanfte Seitenübergänge, Hover-Effekte mit echtem Tiefeneindruck, Button-Feedback beim Klicken.
-          - Die Sidebar hat jetzt einen animierten Auswahl-Indikator, sanftes Glas-Finish und einen dezenten Hover-Effekt auf allen Navigationspunkten.
-          - Der Startbildschirm (Hero) hat einen animierten Aurora-Hintergrund und einen leuchtenden, reagierenden Play-Button.
-          - Fortschrittsbalken (z. B. beim Update) zeigen jetzt einen Shimmer-Effekt während des Ladens.
-          - Fenster (Update-Hinweis, Neuigkeiten) öffnen jetzt mit einer weichen Skalier-Animation statt abrupt zu erscheinen.
-          - Karten (Instanzen, Capes, Hüte, Server, Mods) heben sich beim Hover sichtbar an und werfen einen weichen Schatten.
-          - Bessere Tastatur-Fokus-Sichtbarkeit für Barrierefreiheit; Animationen respektieren die Systemeinstellung "Bewegung reduzieren".
-          - Alle bestehenden Funktionen, Layouts und Bedienelemente bleiben unverändert — es wurde ausschließlich das visuelle Erscheinungsbild verfeinert.
-
-          ### Nutzungshinweis
-          - Kein Verhaltensunterschied bei bestehenden Funktionen: Play, Instanzen, Mods, Server, Cosmetics und Updates funktionieren wie gewohnt.
-          - Falls eine Animation stört, kann sie über die Systemeinstellung "Bewegungen reduzieren" (Windows: Einstellungen → Barrierefreiheit) deaktiviert werden.
+          ### Vortex Client 1.0.30 · Komplettes Blau-Redesign
+          - Der gesamte Launcher wurde visuell neu gestaltet: eine einzige,
+            stimmige Blau-Farbwelt von Marineblau bis Eisblau ersetzt die
+            bisherige Farbmischung.
+          - Durchgehende Animationen: Sidebar mit animiertem Auswahl-Indikator,
+            Startbildschirm mit sanft bewegtem Hintergrund-Glow, Karten heben
+            sich beim Hover sichtbar an, Buttons mit Glanz- und Klick-Feedback.
+          - Fenster (Update-Hinweis, Neuigkeiten) öffnen jetzt mit einer
+            weichen Skalier-Animation.
+          - Fortschrittsbalken zeigen einen Schimmer-Effekt während des Ladens.
+          - Bessere Sichtbarkeit von Tastatur-Fokus; Animationen respektieren
+            die Systemeinstellung "Bewegung reduzieren".
+          - Alle bestehenden Funktionen bleiben unverändert — es wurde
+            ausschließlich das Erscheinungsbild überarbeitet.
 
           ### Stabilität
           - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.
-          - Die Windows-Version wird mit automatischem Update über `latest.yml` und Blockmap ausgeliefert.
+          - Die Windows-Version wird mit automatischem Update über \`latest.yml\` und Blockmap ausgeliefert.
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
