@@ -304,3 +304,199 @@ select option:checked,select option:hover{background:#104b73!important;backgroun
 .hub-hero{display:flex;align-items:center;justify-content:space-between;min-height:210px;padding:32px 40px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(110deg,#0d1b33,#10192a 55%,#08101f);overflow:hidden}.hub-hero-copy{max-width:650px}.hub-hero-copy h3{font-size:27px;margin-bottom:10px}.hub-hero-copy>p:not(.eyebrow){color:#a9b4c9;line-height:1.6;max-width:580px;margin-bottom:20px}.hub-orbit{width:150px;height:150px;display:grid;place-items:center;margin-right:35px;border:1px solid #2d6fa7;border-radius:50%;box-shadow:0 0 34px #1677ff33}.hub-orbit span{font-size:38px;color:#dff7ff}.hub-orbit i,.hub-orbit b{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--cyan)}.hub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:16px}.hub-panel{padding:21px;min-height:335px;display:flex;flex-direction:column;border:1px solid var(--line);background:linear-gradient(145deg,#111827,#0c1220);border-radius:12px}.hub-panel-top{display:flex;align-items:center;justify-content:space-between}.hub-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#173968;color:#79ecff;font-size:20px}.hub-panel h3{font-size:17px;margin-top:16px}.hub-panel>p{color:#92a0b8;font-size:11px;line-height:1.6;margin:9px 0 16px}.hub-panel label{font:9px 'DM Mono';letter-spacing:.6px;color:#8f9db4;margin-top:9px}.hub-panel input{width:100%;margin-top:5px;padding:10px;border-radius:7px;border:1px solid #30425e;background:#0d1422;color:#eaf4ff;font:11px Manrope;outline:none}.hub-panel input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #54d4ff22}.hub-panel .button{margin-top:12px}.hub-note{margin-top:10px;color:#687893;font:9px 'DM Mono';line-height:1.45}.hub-feature-list{display:grid;gap:10px;margin:2px 0 auto}.hub-feature-list span{color:#b7c5d8;font-size:11px}.hub-feature-list b{display:inline-grid;place-items:center;width:20px;color:var(--cyan)}.hub-checklist{margin-top:16px;padding:22px 24px;border:1px solid var(--line);background:linear-gradient(145deg,#111827,#0c1220);border-radius:12px}.hub-checklist h3{font-size:19px}.hub-checklist ol{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;list-style:none;padding:0;margin:20px 0 0}.hub-checklist li{display:flex;gap:10px}.hub-checklist li>span{color:var(--cyan);font:10px 'DM Mono';padding-top:2px}.hub-checklist strong,.hub-checklist small{display:block}.hub-checklist strong{font-size:11px}.hub-checklist small{color:#8190a8;font-size:10px;line-height:1.45;margin-top:4px}@media(max-width:950px){.hub-grid{grid-template-columns:1fr 1fr}.hub-checklist ol{grid-template-columns:1fr}.hub-orbit{margin-right:0}}@media(max-width:720px){.hub-hero{padding:26px}.hub-orbit{display:none}.hub-grid{grid-template-columns:1fr}}
 
 .hub-eula{display:flex!important;align-items:flex-start;gap:8px;margin-top:14px!important;color:#a9b4c9!important;font-size:10px!important;line-height:1.4}.hub-eula input{width:auto!important;margin:1px 0 0!important;accent-color:var(--cyan)}.hub-panel button:disabled{opacity:.45;cursor:not-allowed}
+
+/* ======================================================================
+   VORTEX CLIENT — v1.0.30 VISUAL RELAUNCH
+   Deepened palette, unified motion language, refined depth & focus states.
+   This layer intentionally sits last in the cascade: it overrides colors,
+   radii, shadows and transitions on existing selectors without touching
+   any HTML structure or JS-bound class names, so nothing functional
+   changes — only how it looks and moves.
+   ====================================================================== */
+
+:root{
+  /* Deepened base + refined accent duo (kept cyan/blue identity, added violet as a second accent for highlights/badges/focus) */
+  --bg:#05070d;
+  --surface:#0b1120;
+  --surface-2:#0f1729;
+  --line:#212c46;
+  --line-soft:rgba(84,132,214,.16);
+  --text:#f5f8ff;
+  --muted:#8a97b3;
+  --blue:#1677ff;
+  --cyan:#54d4ff;
+  --lime:#75f2bd;
+  --purple:#a77dff;
+  --violet:#8b6bff;
+  --violet-soft:rgba(139,107,255,.16);
+  --danger:#ff7b8c;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur-fast:.16s;
+  --dur:.28s;
+  --dur-slow:.5s;
+  --radius:14px;
+  --radius-sm:10px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+
+html{scroll-behavior:smooth}
+
+body{
+  background:
+    radial-gradient(circle at 78% -12%, rgba(22,119,255,.16) 0%, transparent 32%),
+    radial-gradient(circle at -6% 106%, rgba(139,107,255,.10) 0%, transparent 38%),
+    var(--bg);
+  background-attachment:fixed;
+}
+
+/* ---------- Sidebar: layered glass, animated active indicator ---------- */
+.sidebar{
+  background:linear-gradient(180deg, rgba(10,14,26,.96), rgba(5,7,13,.98));
+  border-right:1px solid var(--line-soft);
+  backdrop-filter:blur(18px);
+  position:relative;
+}
+.sidebar:after{
+  content:'';position:absolute;top:0;right:-1px;width:1px;height:100%;
+  background:linear-gradient(180deg,transparent,rgba(84,212,255,.35) 18%,rgba(139,107,255,.25) 60%,transparent);
+  pointer-events:none;
+}
+.brand img{
+  box-shadow:0 0 0 1px rgba(84,212,255,.25), 0 0 28px rgba(22,119,255,.45);
+  transition:transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.brand:hover img{transform:rotate(-4deg) scale(1.05);box-shadow:0 0 0 1px rgba(84,212,255,.45), 0 0 36px rgba(84,212,255,.55)}
+
+.nav-link{
+  position:relative;
+  transition:color var(--dur-fast) var(--ease-out), background var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-out), padding-left var(--dur) var(--ease-out);
+  border-radius:var(--radius-sm);
+}
+.nav-link:hover{color:#dce8fb;background:rgba(84,132,214,.08);padding-left:18px}
+.nav-link i{transition:color var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring)}
+.nav-link:hover i{transform:translateX(1px) scale(1.08)}
+.nav-link.active{
+  background:linear-gradient(90deg, rgba(84,212,255,.13), rgba(22,119,255,.05) 70%, transparent);
+  box-shadow:inset 3px 0 var(--cyan), 0 0 22px -8px rgba(84,212,255,.5);
+}
+.nav-link.active:before{
+  content:'';position:absolute;left:0;top:50%;width:3px;height:0;
+  background:linear-gradient(180deg,var(--cyan),var(--violet));
+  animation:navIndicator .32s var(--ease-spring) forwards;
+  border-radius:0 3px 3px 0;
+}
+@keyframes navIndicator{from{height:0;top:50%}to{height:70%;top:15%}}
+
+.sidebar-card{
+  transition:border-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.sidebar-card:hover{border-color:rgba(117,242,189,.4);transform:translateY(-1px);box-shadow:0 8px 20px -10px rgba(117,242,189,.25)}
+.green-dot{animation:softPulse 2.6s ease-in-out infinite}
+@keyframes softPulse{0%,100%{opacity:1;box-shadow:0 0 12px var(--lime)}50%{opacity:.7;box-shadow:0 0 4px var(--lime)}}
+
+.sidebar-update{transition:transform var(--dur) var(--ease-spring), border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out)}
+.sidebar-update:hover{transform:translateY(-2px) scale(1.015)}
+.sidebar-update-orb{animation:spinSlow 3.5s linear infinite}
+@keyframes spinSlow{to{transform:rotate(360deg)}}
+
+/* ---------- Global surfaces: unified radius, depth & hover lift ---------- */
+.info-card, .activity, .instance-card, .cape-card, .hat-card, .emblem-card,
+.hub-panel, .update-card, .server-card, .community-preset-card, .cosmetic-panel,
+.online-mod-card, .website-cape-card{
+  border-radius:var(--radius);
+  transition:transform var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), background var(--dur) var(--ease-out);
+}
+.instance-card:hover, .cape-card:hover, .hat-card:hover, .emblem-card:hover,
+.online-mod-card:hover, .website-cape-card:hover, .community-preset-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 18px 36px -18px rgba(0,0,0,.55), 0 0 0 1px rgba(84,212,255,.12);
+}
+
+/* ---------- Buttons: tactile press feedback + gradient sheen ---------- */
+.button, .icon-button, .play-button, .control-action{
+  transition:transform var(--dur-fast) var(--ease-out), box-shadow var(--dur) var(--ease-out), background var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);
+}
+.button:hover{transform:translateY(-1px)}
+.button:active{transform:translateY(0) scale(.98)}
+.button.primary, .play-button{position:relative;overflow:hidden}
+.button.primary:before, .play-button:before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.22) 50%,transparent 70%);
+  transform:translateX(-120%);
+}
+.button.primary:hover:before, .play-button:hover:before{
+  transform:translateX(120%);
+  transition:transform .7s var(--ease-out);
+}
+.play-button{box-shadow:0 0 30px rgba(22,119,255,.4)}
+.play-button:hover{box-shadow:0 0 42px rgba(84,212,255,.55);transform:translateY(-2px)}
+.play-button:active:not(:disabled){transform:translateY(0) scale(.985)}
+
+/* ---------- Hero: subtle animated aurora ---------- */
+.hero{position:relative}
+.hero:after{
+  content:'';position:absolute;inset:0;z-index:-1;opacity:.55;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 0%, rgba(139,107,255,.16), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 100%, rgba(84,212,255,.14), transparent 60%);
+  animation:auroraDrift 14s ease-in-out infinite alternate;
+}
+@keyframes auroraDrift{
+  0%{transform:translate(0,0) scale(1)}
+  100%{transform:translate(-2%,2%) scale(1.06)}
+}
+.hero-logo{transition:transform .6s var(--ease-out), filter .6s var(--ease-out)}
+.hero:hover .hero-logo{transform:scale(1.03) rotate(1deg);filter:drop-shadow(0 0 34px rgba(84,212,255,.65))}
+.play-button span{display:inline-block;animation:playBob 2.2s ease-in-out infinite}
+@keyframes playBob{0%,100%{transform:translateX(0)}50%{transform:translateX(2px)}}
+
+/* ---------- Page transitions: single orchestrated reveal on page change ---------- */
+.page.active{animation:pageEnter var(--dur-slow) var(--ease-out)}
+@keyframes pageEnter{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ---------- Progress bars: shimmer while active ---------- */
+.update-progress, .startup-loader-progress{position:relative;overflow:hidden}
+.update-progress>div, .startup-loader-progress>span{position:relative;overflow:hidden}
+.update-progress>div:after, .startup-loader-progress>span:after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+  animation:shimmer 1.6s linear infinite;
+}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+/* ---------- Modals: entrance scale + backdrop fade ---------- */
+.news-modal:not([hidden]), .update-modal:not([hidden]){animation:modalBackdrop var(--dur) var(--ease-out)}
+.news-modal-card, .update-modal-card{animation:modalCard var(--dur-slow) var(--ease-spring)}
+@keyframes modalBackdrop{from{opacity:0}to{opacity:1}}
+@keyframes modalCard{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ---------- Status & live indicators ---------- */
+.status-pill{transition:box-shadow var(--dur) var(--ease-out)}
+.loadout-live i, .server-media-badge.online:before{animation:softPulse 2.2s ease-in-out infinite}
+
+/* ---------- Toggle switches: springy thumb ---------- */
+.toggle-mod-button span, .mod-switch span{transition:transform .22s var(--ease-spring), background var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out)}
+
+/* ---------- Focus visibility (accessibility) ---------- */
+button:focus-visible, .nav-link:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline:2px solid var(--cyan);
+  outline-offset:2px;
+}
+
+/* ---------- Scrollbar refinement to match new palette ---------- */
+*::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--blue),var(--violet))}
+*::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,var(--cyan),var(--violet))}
+
+/* ---------- Account / avatar micro-interaction ---------- */
+.avatar, .account-profile-avatar{transition:transform var(--dur) var(--ease-spring), box-shadow var(--dur) var(--ease-out)}
+.account-current:hover .avatar, .account-current:hover .account-profile-avatar{transform:scale(1.05)}
+
+/* ---------- Badges get the new violet accent for variety ---------- */
+.mod-badge, .server-media-badge, .instance-badge{transition:border-color var(--dur) var(--ease-out), background var(--dur) var(--ease-out)}
