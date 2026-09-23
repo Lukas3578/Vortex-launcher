@@ -31,7 +31,7 @@ jobs:
           cat > release-notes.md <<EOF
           ## Vortex Client $GITHUB_REF_NAME
 
-          ### Vortex Client 1.0.32 · Komplettes Blau-Redesign
+          ### Vortex Client 1.0.33 · Komplettes Blau-Redesign
           - Der gesamte Launcher wurde visuell neu gestaltet: eine einzige,
             stimmige Blau-Farbwelt von Marineblau bis Eisblau ersetzt die
             bisherige Farbmischung.
