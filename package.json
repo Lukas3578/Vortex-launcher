@@ -1,6 +1,6 @@
 {
   "name": "vortex-launcher",
-  "version": "1.0.35",
+  "version": "1.0.37",
   "description": "Vortex Launcher with isolated Fabric instances",
   "main": "src/main.js",
   "author": "Vortex Client",
