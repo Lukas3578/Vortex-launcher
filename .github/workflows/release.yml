@@ -29,26 +29,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<EOF
-          ## Vortex Client $GITHUB_REF_NAME
-
-          ### Vortex Client 1.0.33 · Komplettes Blau-Redesign
-          - Der gesamte Launcher wurde visuell neu gestaltet: eine einzige,
-            stimmige Blau-Farbwelt von Marineblau bis Eisblau ersetzt die
-            bisherige Farbmischung.
-          - Durchgehende Animationen: Sidebar mit animiertem Auswahl-Indikator,
-            Startbildschirm mit sanft bewegtem Hintergrund-Glow, Karten heben
-            sich beim Hover sichtbar an, Buttons mit Glanz- und Klick-Feedback.
-          - Fenster (Update-Hinweis, Neuigkeiten) öffnen jetzt mit einer
-            weichen Skalier-Animation.
-          - Fortschrittsbalken zeigen einen Schimmer-Effekt während des Ladens.
-          - Bessere Sichtbarkeit von Tastatur-Fokus; Animationen respektieren
-            die Systemeinstellung "Bewegung reduzieren".
-          - Alle bestehenden Funktionen bleiben unverändert — es wurde
-            ausschließlich das Erscheinungsbild überarbeitet.
-
-          ### Stabilität
-          - Bestehende Instanzen, Mods, Resource Packs und Kontodaten bleiben erhalten.
-          - Die Windows-Version wird mit automatischem Update über \`latest.yml\` und Blockmap ausgeliefert.
+          
           EOF
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
