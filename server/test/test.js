@@ -200,16 +200,17 @@ const rejects = async (p, re) => { try { await p; } catch (e) { assert.match(e.m
     await alice.req('shop.buy', { item: 'aura:hearts' });
     for (const item of ['bandana:lightning', 'back:teddy_backpack', 'shield:vortex']) await bob.req('shop.buy', { item });
     cs = await alice.req('cosmetics.set', { cape: 'custom', hat: 'crown', particles: 'hearts', density: 3, extra: 'x' });
-    const leer = { bandana: '', face: '', back: '', shield: '', neck: '', nametag: '' };
+    const leer = { bandana: '', face: '', back: '', shield: '', neck: '', nametag: '', pet: '' };
     assert.deepEqual(cs.cosmetics, { cape: 'custom', hat: 'crown', particles: 'hearts', density: 3, ...leer });
     cs = await bob.req('cosmetics.set', { cape: 'vortex_blue', hat: 'Top Hat!', particles: '', density: 99, bandana: 'lightning', face: 'Bad Id', back: 'teddy_backpack', shield: 'vortex' });
-    assert.deepEqual(cs.cosmetics, { cape: 'vortex_blue', hat: '', particles: '', density: 2, bandana: 'lightning', face: '', back: 'teddy_backpack', shield: 'vortex', neck: '', nametag: '' });
+    assert.deepEqual(cs.cosmetics, { cape: 'vortex_blue', hat: '', particles: '', density: 2, bandana: 'lightning', face: '', back: 'teddy_backpack', shield: 'vortex', neck: '', nametag: '', pet: '' });
     let cg = await bob.req('cosmetics.get', { uuids: [a.uuid, bob.me.uuid, 'kaputt', carl.me.uuid] });
     assert.equal(cg.players[a.uuid].image, up.hash);
     assert.equal(cg.players[a.uuid].hat, 'crown');
     assert.equal(cg.players[bob.me.uuid].cape, 'vortex_blue');
     assert.equal(cg.players[bob.me.uuid].back, 'teddy_backpack', 'new cosmetics (4.29) reach other players');
-    assert.equal(cg.players[carl.me.uuid], undefined, 'no cosmetics stored for Carl');
+    assert.equal(cg.players[carl.me.uuid].hat, '', 'no cosmetics stored for Carl');
+    assert.equal(cg.players[carl.me.uuid].badge, 'vortex', 'every Vortex player gets [V]');
     const bild = await bob.req('cosmetics.imageGet', { hash: up.hash });
     assert.equal(bild.image, pngKopf(512, 256));
     cg = await carl.req('cosmetics.get', { uuids: [a.uuid] });
@@ -302,8 +303,8 @@ const rejects = async (p, re) => { try { await p; } catch (e) { assert.match(e.m
     await rejects(al.req('shop.gift', { item: 'face:monocle', to: 'Bob' }), /already owns/);
     await rejects(al.req('shop.gift', { item: 'face:bow', to: 'Alice' }), /yourself/);
     await rejects(al.req('shop.gift', { item: 'face:bow', to: 'Zed' }), /never used Vortex/);
-    await rejects(bo.req('shop.admin.save', { id: 'special:hack', name: 'Hack', price: 0 }), /Only shop admins/);
-    await rejects(bo.req('shop.admin.coins', { to: 'Bob', amount: 99999 }), /Only shop admins/);
+    await rejects(bo.req('shop.admin.save', { id: 'special:hack', name: 'Hack', price: 0 }), /Only Vortex admins/);
+    await rejects(bo.req('shop.admin.coins', { to: 'Bob', amount: 99999 }), /Only Vortex admins/);
     await da.req('shop.admin.save', { id: 'special:founder', name: 'Founder Badge', price: 10, rarity: 'mythic', limited: true, giftable: false });
     await rejects(al.req('shop.gift', { item: 'special:founder', to: 'Bob' }), /cannot be gifted/);
     await al.req('shop.buy', { item: 'special:founder' });
@@ -348,6 +349,131 @@ const rejects = async (p, re) => { try { await p; } catch (e) { assert.match(e.m
     erin.close();
 
     for (const c of [al, bo, ca, da]) c.close();
+    await sleep(1500);
+
+    /* ---------------- Creator-Programm, Admin, Pets (seit 1.2) ---------------- */
+    const al2 = new Client(url, 'Alice'); await al2.connect();
+    const bo2 = new Client(url, 'Bob'); await bo2.connect();
+    const ca2 = new Client(url, 'Carl'); await ca2.connect();
+    const da2 = new Client(url, 'Dave'); await da2.connect();
+    let cm = await ca2.req('creator.me');
+    assert.equal(cm.status, 'none');
+    assert.equal(cm.badge, 'vortex');
+    assert.match(cm.discord, /discord\.gg\/EQYZTRRp6J/);
+    assert.equal((await ca2.req('creator.apply', { discord: 'carl#1' })).status, 'pending');
+    await rejects(ca2.req('creator.apply'), /already being reviewed/);
+    await rejects(bo2.req('admin.creator.set', { name: 'Carl', status: 'accepted', reason: 'hack' }), /Only Vortex admins/);
+    await rejects(bo2.req('admin.overview'), /Only Vortex admins/);
+    await rejects(da2.req('admin.creator.set', { name: 'Carl', status: 'accepted' }), /reason/);
+    await da2.req('admin.creator.set', { name: 'Carl', status: 'accepted', code: 'carl', reason: 'great videos' });
+    await rejects(da2.req('admin.creator.set', { name: 'Erin', status: 'accepted', code: 'CARL', reason: 'test' }), /already taken/);
+    await rejects(da2.req('admin.creator.set', { name: 'Erin', code: 'x', reason: 'test' }), /3 to 16/);
+    cm = await ca2.req('creator.me');
+    assert.equal(cm.status, 'accepted');
+    assert.equal(cm.code, 'CARL');
+    assert.equal(cm.badge, 'creator');
+    assert.ok(cm.profile && cm.profile.creatorItems.some(i => i.id === 'pet:phoenix'));
+    assert.equal((await bo2.req('cosmetics.get', { uuids: [ca2.me.uuid] })).players[ca2.me.uuid].badge, 'creator', '[CREATOR] badge for others');
+    assert.ok((await al2.req('creator.list')).creators.some(c => c.name === 'Carl' && c.code === 'CARL'));
+    assert.equal((await al2.req('creator.profile', { name: 'carl' })).code, 'CARL');
+    await rejects(al2.req('creator.profile', { name: 'Bob' }), /not a Vortex Creator/);
+
+    await rejects(al2.req('shop.buy', { item: 'pet:phoenix' }), /Only Vortex Creators/);
+    let cst = await ca2.req('shop.state');
+    assert.ok(cst.items.find(i => i.id === 'pet:phoenix').owned, 'creators own creator items');
+    await ca2.req('shop.buy', { item: 'pet:phoenix' }).catch(() => null);
+    assert.equal((await ca2.req('cosmetics.set', { pet: 'phoenix', nametag: 'creator' })).cosmetics.pet, 'phoenix');
+    const alSet = await al2.req('cosmetics.set', { pet: 'phoenix', nametag: 'creator' });
+    assert.equal(alSet.cosmetics.pet, '', 'creator pet stripped for non-creators');
+    assert.equal(alSet.cosmetics.nametag, '', 'creator name effect stripped for non-creators');
+    await rejects(al2.req('shop.gift', { item: 'pet:phoenix', to: 'Bob' }), /Only Vortex Creators|cannot be gifted/);
+
+    await rejects(ca2.req('creator.support', { code: 'CARL' }), /own code/);
+    await rejects(al2.req('creator.support', { code: 'NOPE' }), /does not exist/);
+    assert.equal((await al2.req('creator.support', { code: 'carl' })).supporting.code, 'CARL');
+    assert.equal((await al2.req('shop.state')).supporting, 'CARL');
+    const carlVorher = (await ca2.req('shop.state')).balance;
+    const kauf = await da2.req('admin.coins', { name: 'Alice', amount: 1000, reason: 'test coins', requestId: 'adm-test-0001' });
+    const doppelt = await da2.req('admin.coins', { name: 'Alice', amount: 1000, reason: 'test coins', requestId: 'adm-test-0001' });
+    assert.equal(doppelt.balance, kauf.balance, 'admin coins with the same request id count once');
+    assert.equal(doppelt.duplicate, true);
+    await rejects(da2.req('admin.coins', { name: 'Alice', amount: 5, reason: 'x', requestId: 'adm-test-0002' }), /reason/);
+    await rejects(da2.req('admin.coins', { name: 'Alice', amount: 5, reason: 'no id' }), /request id/);
+    await rejects(da2.req('admin.coins', { name: 'Bob', amount: -999999, reason: 'too much', requestId: 'adm-test-0003' }), /Invalid amount|not have that many/);
+    await al2.req('shop.buy', { item: 'pet:bee', requestId: 'kauf-biene-0001' });
+    const carlNach = (await ca2.req('shop.state')).balance;
+    assert.equal(carlNach, carlVorher + 10, 'creator gets 5 % of a 200 coin purchase');
+    assert.ok((await ca2.req('shop.history')).tx.some(t => t.kind === 'creator_reward' && t.amount === 10 && t.other === 'Alice'));
+    await al2.req('shop.buy', { item: 'pet:bee', requestId: 'kauf-biene-0001' });
+    assert.equal((await ca2.req('shop.state')).balance, carlNach, 'replayed purchase pays no second reward');
+    await da2.req('admin.creator.set', { name: 'Erin', status: 'accepted', code: 'ERIN', reason: 'second creator' });
+    await rejects(al2.req('creator.support', { code: 'ERIN' }), /again in 7 days/);
+
+    await da2.req('admin.creator.set', { name: 'Carl', status: 'suspended', reason: 'broke rules' });
+    assert.equal((await ca2.req('cosmetics.set', { pet: 'phoenix' })).cosmetics.pet, '', 'suspended creators lose creator items');
+    assert.equal((await bo2.req('cosmetics.get', { uuids: [ca2.me.uuid] })).players[ca2.me.uuid].badge, 'vortex');
+    await sleep(1200);
+
+    await rejects(da2.req('admin.grant', { name: 'Bob', item: 'pet:ghost' }), /reason/);
+    await da2.req('admin.grant', { name: 'Bob', item: 'pet:ghost', reason: 'event winner' });
+    assert.equal((await bo2.req('cosmetics.set', { pet: 'ghost' })).cosmetics.pet, 'ghost');
+    await da2.req('admin.revoke', { name: 'Bob', item: 'pet:ghost', reason: 'mistake' });
+    const bobSel = (await al2.req('cosmetics.get', { uuids: [bo2.me.uuid] })).players[bo2.me.uuid];
+    assert.equal(bobSel.pet, '', 'revoked item is taken off');
+
+    const zukunft = Date.now() + 86400000;
+    await da2.req('admin.item.save', { id: 'pet:slime', starts: zukunft, reason: 'coming soon' });
+    await rejects(bo2.req('shop.buy', { item: 'pet:slime' }), /not available yet/);
+    await da2.req('admin.item.save', { id: 'face:bow', limited: true, starts: 0, ends: Date.now() - 1000, reason: 'limited ended' });
+    assert.ok((await al2.req('shop.state')).items.find(i => i.id === 'face:bow').owned, 'limited items stay owned after the end');
+    await rejects(bo2.req('shop.buy', { item: 'face:bow' }), /no longer available/);
+    await rejects(da2.req('admin.item.save', { id: 'pet:slime', starts: 2000, ends: 1000, reason: 'bad dates' }), /end must be after/);
+    await da2.req('admin.item.save', { id: 'pet:slime', starts: 0, ends: 0, featured: true, description: 'Bouncy!', reason: 'back in shop' });
+    const ai = await da2.req('admin.items');
+    assert.ok(ai.items.find(i => i.id === 'pet:bee').owners >= 1);
+    assert.equal(ai.items.find(i => i.id === 'pet:slime').description, 'Bouncy!');
+    await sleep(1200);
+
+    await rejects(da2.req('admin.ban', { name: 'Dave', reason: 'self' }), /yourself/);
+    await da2.req('admin.ban', { name: 'Erin', reason: 'cheating' });
+    await rejects(new Client(url, 'Erin').connect(), /banned/);
+    await da2.req('admin.unban', { name: 'Erin', reason: 'appeal accepted' });
+    const erin2 = new Client(url, 'Erin'); await erin2.connect(); erin2.close();
+
+    await rejects(da2.req('admin.settings.set', { settings: { coinsPerMinute: 500 }, reason: 'too much' }), /between/);
+    await da2.req('admin.settings.set', { settings: { coinsPerMinute: 2 }, reason: 'double coins weekend' });
+    const sp = new Client(url, 'Bob', 'game'); await sp.connect();
+    await sp.req('activity', { mode: 'singleplayer', version: '26.2' });
+    const b0 = (await bo2.req('shop.state')).balance;
+    await srv.hub.shopTick(60);
+    assert.equal((await bo2.req('shop.state')).balance, b0 + 2, 'coins per minute setting');
+    sp.close();
+
+    const ov = await da2.req('admin.overview');
+    assert.equal(ov.creators, 1);
+    assert.ok(ov.players >= 5 && ov.pets >= 6 && ov.sales >= 5);
+    const eco = await da2.req('admin.economy');
+    assert.ok(eco.totalCoins > 0 && eco.creatorRewards === 10 && eco.adminAdded >= 1000);
+    const ana = await da2.req('admin.analytics', { days: 14 });
+    assert.equal(ana.days.length, 14);
+    assert.ok(ana.days[13].sales >= 1);
+    const spl = await da2.req('admin.players', { q: 'car' });
+    assert.equal(spl.players[0].name, 'Carl');
+    assert.equal(spl.players[0].creator, 'suspended');
+    const pl = await da2.req('admin.player', { name: 'Alice' });
+    assert.ok(pl.owned.some(o => o.id === 'pet:bee') && pl.supporting.code === 'CARL' && pl.tx.length > 0);
+    const txs = await da2.req('admin.tx', { kind: 'creator_reward' });
+    assert.equal(txs.tx.length, 1);
+    await sleep(1200);
+    const log = await da2.req('admin.audit', {});
+    for (const act of ['creator_accepted', 'coins_add', 'item_grant', 'item_revoke', 'player_ban', 'player_unban', 'settings', 'creator_suspended']) {
+      assert.ok(log.entries.some(e => e.action === act), `audit has ${act}`);
+    }
+    const ban = log.entries.find(e => e.action === 'player_ban');
+    assert.equal(ban.admin, 'Dave'); assert.equal(ban.target, 'Erin'); assert.equal(ban.reason, 'cheating');
+    assert.equal((await da2.req('admin.audit', { q: 'double coins' })).entries.length, 1, 'audit search');
+    await rejects(da2.req('admin.audit.delete', { id: ban.id }), /Unknown request/);
+    for (const c of [al2, bo2, ca2, da2]) c.close();
     bob.clear();
     alice.close();
     await sleep(150);

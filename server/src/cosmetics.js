@@ -19,7 +19,7 @@ function cleanSelection(a) {
   return {
     cape: id(a?.cape), hat: id(a?.hat), particles: id(a?.particles), density: d >= 1 && d <= 3 ? Math.round(d) : 2,
     bandana: id(a?.bandana), face: id(a?.face), back: id(a?.back), shield: id(a?.shield),
-    neck: id(a?.neck), nametag: id(a?.nametag),
+    neck: id(a?.neck), nametag: id(a?.nametag), pet: id(a?.pet),
   };
 }
 

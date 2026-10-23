@@ -33,6 +33,7 @@ const mojang = require('./mojang');
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const PROTOCOL = 1;
+const VERSION = require('../package.json').version;
 
 /** Einfacher Token-Eimer: `cap` auf einmal, danach `perSec` pro Sekunde. */
 function bucket(cap, perSec) {
@@ -60,7 +61,7 @@ async function start({ env = process.env, port = Number(env.PORT) || 8080, hasJo
     if (url === '/health') { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('ok'); return; }
     if (url === '/' || url === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-      res.end(JSON.stringify({ name: 'Vortex Friends', protocol: PROTOCOL, online: hub.conns.size, users: hub.users.size, uptime: Math.round((Date.now() - started) / 1000) }));
+      res.end(JSON.stringify({ name: 'Vortex Friends', version: VERSION, shop: true, protocol: PROTOCOL, online: hub.conns.size, users: hub.users.size, uptime: Math.round((Date.now() - started) / 1000) }));
       return;
     }
     res.writeHead(404); res.end();

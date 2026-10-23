@@ -1,25 +1,27 @@
 'use strict';
 /**
- * Coins und Cosmetic-Shop (seit Friends-Server 1.1).
+ * Coins und Cosmetic-Shop (seit Friends-Server 1.1, erweitert in 1.2).
  *
- * COINS      1 Coin pro Minute, in der das SPIEL (Vortex Client) verbunden ist und man in
- *            einer Welt spielt (Einzelspieler, Server, Realms) -- das Hauptmenue zaehlt
- *            nicht. Gezaehlt wird hier auf dem Server je Spieler (nicht je Verbindung):
- *            mehrere Fenster oder Neu-Verbinden bringen nichts extra. Der Client meldet
- *            nur, WO er ist; wie viele Coins jemand hat, weiss nur der Server.
- * SHOP       Alle bisherigen Cosmetics plus Namens-Effekte, mit Preis und Seltenheit
- *            (Start-Katalog shop-katalog.json; Admins aendern danach im Spiel). Gekauft
- *            wird atomar: Abzug nur, wenn genug da ist (eine SQL-Anweisung), Freischaltung
- *            nur einmal (Primaerschluessel), und eine Anfrage-ID verhindert doppelte Kaeufe,
- *            wenn der Client nach einem Abbruch noch einmal schickt.
+ * COINS      Pro Minute, in der das SPIEL (Vortex Client) verbunden ist und man in einer Welt
+ *            spielt (Einzelspieler, Server, Realms), gibt es Coins (Standard 1, Einstellung
+ *            coinsPerMinute) -- das Hauptmenue zaehlt nicht. Gezaehlt wird hier auf dem Server
+ *            je Spieler (nicht je Verbindung): mehrere Fenster oder Neu-Verbinden bringen nichts.
+ * SHOP       Alle Cosmetics mit Preis und Seltenheit (Start-Katalog shop-katalog.json; Admins
+ *            aendern danach). Gekauft wird atomar: Abzug nur, wenn genug da ist (eine
+ *            SQL-Anweisung), Freischaltung nur einmal (Primaerschluessel), und eine Anfrage-ID
+ *            verhindert doppelte Kaeufe, wenn der Client nach einem Abbruch noch einmal schickt.
+ * ZEITRAUM   Items koennen ab/bis einem Zeitpunkt zu kaufen sein (starts/ends). Wer ein
+ *            limitiertes Item hat, behaelt es fuer immer -- auch nach dem Ende.
+ * CREATOR    Creator-Items (creatorOnly) koennen nur akzeptierte Creator holen und tragen.
+ *            Wer einen Creator-Code unterstuetzt, bringt dem Creator bei jedem Kauf einen
+ *            Anteil (creatorRewardPercent) -- bezahlt vom Server, dem Kaeufer kostet es nichts.
  * BESTAND    Wer zum ersten Mal kommt, behaelt alles, was er gerade traegt (Quelle "legacy"),
  *            und bekommt ein Startguthaben.
  * DURCHSETZEN cosmetics.set nimmt nur, was einem gehoert -- alles andere sehen die anderen
- *            Spieler nicht. Unbekannte Cosmetics (z. B. Capes aus dem Netz, eigenes Cape-Bild)
- *            und Items mit Preis 0 sind frei.
- * ADMINS     nur nach UUID. SHOP_ADMINS (Komma-Liste) darf Namen oder UUIDs enthalten; Namen
- *            werden einmal bei Mojang nachgeschlagen und die UUID festgehalten (Tabelle
- *            shop_admins) -- wer den Namen spaeter bekommt, wird dadurch kein Admin.
+ *            Spieler nicht. Unbekannte Cosmetics und Items mit Preis 0 sind frei (ausser
+ *            Creator-Items).
+ * ADMINS     nur nach UUID (siehe admin.js). SHOP_ADMINS darf Namen oder UUIDs enthalten; Namen
+ *            werden einmal bei Mojang nachgeschlagen und die UUID festgehalten.
  */
 const crypto = require('crypto');
 const KATALOG = require('./shop-katalog.json');
@@ -27,17 +29,23 @@ const KATALOG = require('./shop-katalog.json');
 const RARITIES = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 const PREIS = { common: 50, uncommon: 100, rare: 200, epic: 400, legendary: 800, mythic: 1500 };
 const CATS = ['cape', 'back', 'hat', 'aura', 'face', 'neck', 'bandana', 'shield', 'nametag', 'pet', 'trail', 'special'];
-const STARTGUTHABEN = 150;
 const ADMINS_STANDARD = ['Lukas3577', 'M_rc'];
 const ITEM_ID = /^[a-z]{2,12}:[a-z0-9_-]{1,40}$/;
 const WELT = new Set(['singleplayer', 'server', 'realms']);
-const FELD_KAT = { cape: 'cape', hat: 'hat', particles: 'aura', bandana: 'bandana', face: 'face', back: 'back', shield: 'shield', neck: 'neck', nametag: 'nametag' };
-const LIMITS = { history: 50, days: 30, priceMax: 1000000, grantMax: 100000, nameMax: 40 };
+const FELD_KAT = { cape: 'cape', hat: 'hat', particles: 'aura', bandana: 'bandana', face: 'face', back: 'back', shield: 'shield', neck: 'neck', nametag: 'nametag', pet: 'pet' };
+const LIMITS = { history: 50, days: 30, priceMax: 1000000, grantMax: 100000, nameMax: 40, descMax: 160 };
+/** Einstellungen, die Admins aendern koennen (Tabelle server_settings). */
+const EINSTELLUNGEN = {
+  coinsPerMinute: { standard: 1, min: 0, max: 100 },
+  starterCoins: { standard: 150, min: 0, max: 100000 },
+  creatorRewardPercent: { standard: 5, min: 0, max: 50 },
+  supportCooldownDays: { standard: 7, min: 0, max: 365 }
+};
 /** Reihenfolge der Ketten und Namens-Effekte im gepackten Face-Feld (wie im Client). */
 const NECK_IDS = ['gold_chain', 'silver_chain', 'iced_cuban', 'diamond_pendant', 'vortex_pendant', 'heart_locket', 'pearl_necklace', 'dog_tags',
   'moon_charm', 'skull_chain', 'fire_opal', 'emerald_amulet', 'event_horizon', 'star_charm', 'sun_medallion', 'thunder_bolt'];
 const NAMETAG_IDS = ['shaking', 'waving', 'iterating', 'flipping', 'skewing', 'growing', 'gradient', 'rainbow', 'metallic', 'fade', 'shimmer',
-  'blinking', 'chromatic', 'fire', 'outline', 'glowing'];
+  'blinking', 'chromatic', 'fire', 'outline', 'glowing', 'creator'];
 
 const now = () => Date.now();
 const tag = t => new Date(t).toISOString().slice(0, 10);
@@ -45,17 +53,28 @@ const basis = v => String(v || '').split('--')[0];
 
 function factory({ fail, cleanText }) {
   const methods = {
-    /** Beim Start: Katalog laden und ergaenzen, Admins laden. */
+    /** Beim Start: Katalog laden und ergaenzen, Einstellungen und Admins laden. */
     async _shopLaden(adminListe) {
       this.shop = new Map();
       this.shopAdmins = new Set();
       this.shopOffen = new Map();
       this.shopSperren = new Map();
+      this.einstellungen = {};
+      for (const [k, d] of Object.entries(EINSTELLUNGEN)) this.einstellungen[k] = d.standard;
+      for (const r of await this.db.all('SELECT k, v FROM server_settings')) {
+        const d = EINSTELLUNGEN[r.k];
+        const n = Number(r.v);
+        if (d && Number.isFinite(n)) this.einstellungen[r.k] = Math.max(d.min, Math.min(d.max, n));
+      }
       for (const r of await this.db.all('SELECT * FROM shop_items')) this.shop.set(r.id, this._itemAusZeile(r));
       let neu = 0;
       for (const k of KATALOG.items) {
         if (this.shop.has(k.id) || !ITEM_ID.test(k.id)) continue;
-        const it = { id: k.id, cat: k.cat, name: k.name, price: PREIS[k.rarity] || 100, rarity: k.rarity, giftable: true, limited: false, active: true, deleted: false };
+        const it = {
+          id: k.id, cat: k.cat, name: k.name, price: k.price !== undefined ? k.price : PREIS[k.rarity] || 100, rarity: k.rarity,
+          giftable: !k.creatorOnly, limited: false, active: true, deleted: false, description: k.description || '',
+          featured: Boolean(k.featured), creatorOnly: Boolean(k.creatorOnly), starts: 0, ends: 0, created: now()
+        };
         await this._itemSpeichern(it);
         neu++;
       }
@@ -87,20 +106,27 @@ function factory({ fail, cleanText }) {
     },
 
     _itemAusZeile(r) {
-      return { id: r.id, cat: r.cat, name: r.name, price: Number(r.price), rarity: r.rarity, giftable: Boolean(r.giftable),
-        limited: Boolean(r.limited), active: Boolean(r.active), deleted: Boolean(r.deleted) };
+      return {
+        id: r.id, cat: r.cat, name: r.name, price: Number(r.price), rarity: r.rarity, giftable: Boolean(r.giftable),
+        limited: Boolean(r.limited), active: Boolean(r.active), deleted: Boolean(r.deleted), description: r.description || '',
+        featured: Boolean(r.featured), creatorOnly: Boolean(r.creator_only), starts: Number(r.starts) || 0, ends: Number(r.ends) || 0,
+        created: Number(r.created) || 0
+      };
     },
 
     async _itemSpeichern(it) {
-      await this.db.run(`INSERT INTO shop_items (id, cat, name, price, rarity, giftable, limited, active, deleted, updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET cat = excluded.cat, name = excluded.name, price = excluded.price,
-        rarity = excluded.rarity, giftable = excluded.giftable, limited = excluded.limited, active = excluded.active,
-        deleted = excluded.deleted, updated = excluded.updated`,
-      [it.id, it.cat, it.name, it.price, it.rarity, it.giftable ? 1 : 0, it.limited ? 1 : 0, it.active ? 1 : 0, it.deleted ? 1 : 0, now()]);
+      await this.db.run(`INSERT INTO shop_items (id, cat, name, price, rarity, giftable, limited, active, deleted, updated,
+          description, featured, creator_only, starts, ends, created)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET cat = excluded.cat, name = excluded.name,
+        price = excluded.price, rarity = excluded.rarity, giftable = excluded.giftable, limited = excluded.limited, active = excluded.active,
+        deleted = excluded.deleted, updated = excluded.updated, description = excluded.description, featured = excluded.featured,
+        creator_only = excluded.creator_only, starts = excluded.starts, ends = excluded.ends`,
+      [it.id, it.cat, it.name, it.price, it.rarity, it.giftable ? 1 : 0, it.limited ? 1 : 0, it.active ? 1 : 0, it.deleted ? 1 : 0, now(),
+        it.description || '', it.featured ? 1 : 0, it.creatorOnly ? 1 : 0, it.starts || 0, it.ends || 0, it.created || now()]);
       this.shop.set(it.id, it);
     },
 
-    _shopAdmin(me) { if (!this.shopAdmins.has(me)) fail('Only shop admins can do that.'); },
+    _shopAdmin(me) { if (!this.shopAdmins.has(me)) fail('Only Vortex admins can do that.'); },
 
     /** Nacheinander je Spieler (Kaeufe, Geschenke, Gutschriften). */
     _shopSperre(uuid, fn) {
@@ -123,14 +149,16 @@ function factory({ fail, cleanText }) {
     async _konto(uuid) {
       let w = await this.db.get('SELECT * FROM wallets WHERE uuid = ?', [uuid]);
       if (w) return w;
+      const start = this.einstellungen.starterCoins;
       const r = await this.db.run('INSERT INTO wallets (uuid, balance, earned, minutes, created, updated) VALUES (?, ?, 0, 0, ?, ?) ON CONFLICT (uuid) DO NOTHING',
-        [uuid, STARTGUTHABEN, now(), now()]);
+        [uuid, start, now(), now()]);
       if (r.changes > 0) {
-        await this._tx(uuid, 'starter', STARTGUTHABEN);
+        if (start > 0) await this._tx(uuid, 'starter', start);
         const row = await this.db.get('SELECT data FROM cosmetics WHERE uuid = ?', [uuid]);
         let sel = {};
         try { sel = JSON.parse(row?.data || '{}') || {}; } catch (_) {}
         for (const id of this._itemsDerAuswahl(sel)) {
+          if (this.shop.get(id)?.creatorOnly) continue;
           await this.db.run('INSERT INTO owned (uuid, item, source, created) VALUES (?, ?, ?, ?) ON CONFLICT (uuid, item) DO NOTHING', [uuid, id, 'legacy', now()]);
         }
       }
@@ -156,21 +184,32 @@ function factory({ fail, cleanText }) {
       return out;
     },
 
+    /**
+     * Was einem gehoert. Creator-Items, die man als Creator geholt hat (Quelle "creator"),
+     * zaehlen nur, solange man Creator ist -- von einem Admin geschenkte bleiben.
+     */
     async _besitz(uuid) {
-      return new Set((await this.db.all('SELECT item FROM owned WHERE uuid = ?', [uuid])).map(r => r.item));
+      const out = new Set();
+      for (const r of await this.db.all('SELECT item, source FROM owned WHERE uuid = ?', [uuid])) {
+        if (r.source === 'creator' && this.shop.get(r.item)?.creatorOnly) continue;
+        out.add(r.item);
+      }
+      return out;
     },
 
-    /** Darf uuid dieses Item tragen? Frei: unbekannt oder Preis 0. */
-    _frei(itemId) {
+    /** Darf uuid dieses Item tragen? Creator-Items nur Creator, sonst frei bei Preis 0 oder Besitz. */
+    _darf(uuid, itemId, hat) {
       const it = this.shop.get(itemId);
-      return !it || it.price <= 0;
+      if (!it) return true;
+      if (it.creatorOnly) return hat.has(itemId) || this._istCreator(uuid);
+      return it.price <= 0 || hat.has(itemId);
     },
 
     /** Auswahl auf das beschraenken, was einem gehoert (fuer cosmetics.set). */
     async _auswahlPruefen(uuid, sel) {
       await this._konto(uuid);
       const hat = await this._besitz(uuid);
-      const darf = id => this._frei(id) || hat.has(id);
+      const darf = id => this._darf(uuid, id, hat);
       const out = { ...sel };
       for (const [feld, cat] of Object.entries(FELD_KAT)) {
         const v = basis(out[feld]);
@@ -192,17 +231,43 @@ function factory({ fail, cleanText }) {
       return out;
     },
 
-    _itemPub(it, hat) {
-      return { id: it.id, cat: it.cat, key: it.id.slice(it.cat.length + 1), name: it.name, price: it.price, rarity: it.rarity,
-        giftable: it.giftable, limited: it.limited, forSale: it.active && !it.deleted, owned: it.price <= 0 || hat.has(it.id) };
+    /** Gespeicherte Auswahl neu pruefen und speichern (nach Entzug eines Items oder Creator-Status). */
+    async _auswahlNeuPruefen(uuid) {
+      const row = await this.db.get('SELECT data FROM cosmetics WHERE uuid = ?', [uuid]);
+      if (!row) return;
+      let sel = {};
+      try { sel = JSON.parse(row.data || '{}') || {}; } catch (_) {}
+      const neu = await this._auswahlPruefen(uuid, sel);
+      if (JSON.stringify(neu) !== JSON.stringify(sel)) {
+        await this.db.run('UPDATE cosmetics SET data = ?, updated = ? WHERE uuid = ?', [JSON.stringify(neu), now(), uuid]);
+      }
+    },
+
+    /** Ist das Item gerade zu haben (im Verkauf und im Zeitraum)? */
+    _imZeitraum(it, t = now()) {
+      return (!it.starts || t >= it.starts) && (!it.ends || t < it.ends);
+    },
+
+    _itemPub(it, hat, uuid) {
+      return {
+        id: it.id, cat: it.cat, key: it.id.slice(it.cat.length + 1), name: it.name, price: it.price, rarity: it.rarity,
+        giftable: it.giftable && !it.creatorOnly, limited: it.limited, forSale: it.active && !it.deleted && this._imZeitraum(it),
+        owned: hat.has(it.id) || (!it.creatorOnly && it.price <= 0) || (it.creatorOnly && this._istCreator(uuid)),
+        description: it.description || '', featured: it.featured, creatorOnly: it.creatorOnly, starts: it.starts, ends: it.ends,
+        created: it.created
+      };
     },
 
     async _shopStand(me) {
       const w = await this._konto(me);
       const hat = await this._besitz(me);
-      const items = [...this.shop.values()].filter(it => !it.deleted || hat.has(it.id)).map(it => this._itemPub(it, hat));
-      return { enabled: true, balance: Number(w.balance), earned: Number(w.earned), minutes: Number(w.minutes), admin: this.shopAdmins.has(me),
-        rarities: RARITIES, items };
+      const items = [...this.shop.values()].filter(it => !it.deleted || hat.has(it.id)).map(it => this._itemPub(it, hat, me));
+      const c = this.creators?.get(me);
+      return {
+        enabled: true, balance: Number(w.balance), earned: Number(w.earned), minutes: Number(w.minutes), admin: this.shopAdmins.has(me),
+        creator: this._istCreator(me), creatorStatus: c ? c.status : 'none', supporting: this.unterstuetzt?.get(me)?.code || '',
+        coinsPerMinute: this.einstellungen.coinsPerMinute, rarities: RARITIES, cats: CATS, items
+      };
     },
 
     async _shopMelden(uuid, extra = {}) {
@@ -215,6 +280,7 @@ function factory({ fail, cleanText }) {
      * egal wie viele Verbindungen; nur, wer in einer Welt spielt.
      */
     async shopTick(sek = 15) {
+      const proMinute = this.einstellungen.coinsPerMinute;
       for (const [uuid, set] of this.conns) {
         const spielt = [...set].some(c => c.kind === 'game' && c.activity && WELT.has(c.activity.mode));
         if (!spielt) continue;
@@ -223,7 +289,7 @@ function factory({ fail, cleanText }) {
         this.shopOffen.set(uuid, offen - 60);
         await this._shopSperre(uuid, async () => {
           await this._konto(uuid);
-          await this.db.run('UPDATE wallets SET balance = balance + 1, earned = earned + 1, minutes = minutes + 1, updated = ? WHERE uuid = ?', [now(), uuid]);
+          await this.db.run('UPDATE wallets SET balance = balance + ?, earned = earned + ?, minutes = minutes + 1, updated = ? WHERE uuid = ?', [proMinute, proMinute, now(), uuid]);
           await this.db.run('INSERT INTO earnings (uuid, day, minutes) VALUES (?, ?, 1) ON CONFLICT (uuid, day) DO UPDATE SET minutes = earnings.minutes + 1', [uuid, tag(now())]);
         }).catch(e => this.log(`Shop tick: ${e.message}`));
         await this._shopMelden(uuid).catch(() => {});
@@ -247,11 +313,29 @@ function factory({ fail, cleanText }) {
       await this.db.run('UPDATE wallets SET balance = balance + ?, updated = ? WHERE uuid = ?', [betrag, now(), uuid]);
     },
 
-    async _kaufbar(id) {
+    /** Kaufbar fuer `me`? (Im Shop, im Verkauf, im Zeitraum, Creator-Items nur fuer Creator.) */
+    async _kaufbar(id, me) {
       const it = this.shop.get(String(id || ''));
       if (!it || it.deleted) fail('This item is not in the shop.');
       if (!it.active) fail('This item is not for sale right now.');
+      if (it.starts && now() < it.starts) fail('This item is not available yet.');
+      if (it.ends && now() >= it.ends) fail('This item is no longer available.');
+      if (it.creatorOnly && !this._istCreator(me)) fail('Only Vortex Creators can get this item.');
       return it;
+    },
+
+    /** Anteil fuer den unterstuetzten Creator (vom Server bezahlt, einmal je Kauf). */
+    async _creatorAnteil(kaeufer, preis, txId) {
+      const s = this.unterstuetzt?.get(kaeufer);
+      if (!s || s.creator === kaeufer || !this._istCreator(s.creator) || !this.creators.get(s.creator)?.codeActive) return;
+      const anteil = Math.floor(preis * this.einstellungen.creatorRewardPercent / 100);
+      if (anteil <= 0) return;
+      await this._shopSperre(s.creator, async () => {
+        await this._konto(s.creator);
+        const neu = await this._tx(s.creator, 'creator_reward', anteil, '', kaeufer, txId ? `${txId}_cr` : null);
+        if (neu) await this._gutschrift(s.creator, anteil);
+      });
+      await this._shopMelden(s.creator).catch(() => {});
     }
   };
 
@@ -265,31 +349,33 @@ function factory({ fail, cleanText }) {
       return {
         tx: tx.map(t => ({ kind: t.kind, amount: Number(t.amount), item: t.item, itemName: this.shop.get(t.item)?.name || t.item,
           other: t.other ? this._pub(t.other).name : '', at: Number(t.created) })),
-        days: days.map(d => ({ day: d.day, minutes: Number(d.minutes), coins: Number(d.minutes) }))
+        days: days.map(d => ({ day: d.day, minutes: Number(d.minutes), coins: Number(d.minutes) * this.einstellungen.coinsPerMinute }))
       };
     },
 
     async 'shop.buy'(me, a) {
-      const it = await this._kaufbar(a.item);
+      const it = await this._kaufbar(a.item, me);
       const txId = this._anfrageId(me, a);
       return this._shopSperre(me, async () => {
         await this._konto(me);
         if (txId && await this.db.get('SELECT id FROM coin_tx WHERE id = ?', [txId])) return this._shopStand(me);
         const hat = await this._besitz(me);
-        if (it.price <= 0 || hat.has(it.id)) fail('You already own this.');
+        if (hat.has(it.id) || (it.price <= 0 && !it.creatorOnly)) fail('You already own this.');
         if (!(await this._abbuchen(me, it.price))) fail('Not enough coins.');
-        const r = await this.db.run('INSERT INTO owned (uuid, item, source, created) VALUES (?, ?, ?, ?) ON CONFLICT (uuid, item) DO NOTHING', [me, it.id, 'buy', now()]);
+        const quelle = it.creatorOnly ? 'creator' : 'buy';
+        const r = await this.db.run('INSERT INTO owned (uuid, item, source, created) VALUES (?, ?, ?, ?) ON CONFLICT (uuid, item) DO NOTHING', [me, it.id, quelle, now()]);
         if (!r.changes) { await this._gutschrift(me, it.price); fail('You already own this.'); }
-        await this._tx(me, 'buy', -it.price, it.id, '', txId);
+        await this._tx(me, it.creatorOnly && it.price <= 0 ? 'claim' : 'buy', -it.price, it.id, '', txId);
         this.log(`shop: ${this._pub(me).name} bought ${it.id} for ${it.price}`);
+        if (it.price > 0) await this._creatorAnteil(me, it.price, txId);
         await this._shopMelden(me, { owned: it.id });
         return this._shopStand(me);
       });
     },
 
     async 'shop.gift'(me, a) {
-      const it = await this._kaufbar(a.item);
-      if (!it.giftable) fail('This item cannot be gifted.');
+      const it = await this._kaufbar(a.item, me);
+      if (!it.giftable || it.creatorOnly) fail('This item cannot be gifted.');
       const zielName = cleanText(a.to, 16);
       const ziel = /^[0-9a-f]{32}$/i.test(zielName) ? zielName.toLowerCase() : this.byName.get(zielName.toLowerCase());
       if (!ziel || !this.users.has(ziel)) fail('This player has never used Vortex.');
@@ -312,71 +398,11 @@ function factory({ fail, cleanText }) {
         await this._shopMelden(me);
         await this._shopMelden(ziel, { owned: it.id, gift: { from: this._pub(me).name, item: it.name } });
         return this._shopStand(me);
-      }));
-    },
-
-    async 'shop.admin.items'(me) {
-      this._shopAdmin(me);
-      return { items: [...this.shop.values()], rarities: RARITIES, cats: CATS, prices: PREIS };
-    },
-
-    async 'shop.admin.save'(me, a) {
-      this._shopAdmin(me);
-      const id = String(a.id || '').toLowerCase();
-      if (!ITEM_ID.test(id)) fail('The item id must look like "cape:my_cape".');
-      const cat = id.split(':')[0];
-      if (!CATS.includes(cat)) fail(`Unknown category "${cat}".`);
-      const alt = this.shop.get(id);
-      const price = a.price === undefined ? alt?.price : Math.round(Number(a.price));
-      if (!Number.isFinite(price) || price < 0 || price > LIMITS.priceMax) fail('Invalid price.');
-      const rarity = a.rarity === undefined ? alt?.rarity || 'common' : String(a.rarity);
-      if (!RARITIES.includes(rarity)) fail('Invalid rarity.');
-      const name = a.name === undefined ? alt?.name : cleanText(a.name, LIMITS.nameMax);
-      if (!name) fail('The item needs a name.');
-      const it = {
-        id, cat, name, price, rarity,
-        giftable: a.giftable === undefined ? (alt ? alt.giftable : true) : Boolean(a.giftable),
-        limited: a.limited === undefined ? (alt ? alt.limited : false) : Boolean(a.limited),
-        active: a.active === undefined ? (alt ? alt.active : true) : Boolean(a.active),
-        deleted: false
-      };
-      await this._itemSpeichern(it);
-      this.log(`shop: ${this._pub(me).name} saved ${id} (${price}, ${rarity})`);
-      for (const uuid of this.conns.keys()) this.emit(uuid, 'shop', { itemsChanged: true });
-      return { item: it };
-    },
-
-    async 'shop.admin.delete'(me, a) {
-      this._shopAdmin(me);
-      const it = this.shop.get(String(a.id || ''));
-      if (!it) fail('This item is not in the shop.');
-      await this._itemSpeichern({ ...it, deleted: true, active: false });
-      this.log(`shop: ${this._pub(me).name} removed ${it.id}`);
-      for (const uuid of this.conns.keys()) this.emit(uuid, 'shop', { itemsChanged: true });
-      return {};
-    },
-
-    async 'shop.admin.coins'(me, a) {
-      this._shopAdmin(me);
-      const name = cleanText(a.to, 16);
-      const ziel = /^[0-9a-f]{32}$/i.test(name) ? name.toLowerCase() : this.byName.get(name.toLowerCase());
-      if (!ziel || !this.users.has(ziel)) fail('Player not found.');
-      const betrag = Math.round(Number(a.amount));
-      if (!Number.isFinite(betrag) || !betrag || Math.abs(betrag) > LIMITS.grantMax) fail('Invalid amount.');
-      return this._shopSperre(ziel, async () => {
-        await this._konto(ziel);
-        if (betrag < 0) { if (!(await this._abbuchen(ziel, -betrag))) fail('The player does not have that many coins.'); }
-        else await this._gutschrift(ziel, betrag);
-        await this._tx(ziel, 'admin', betrag, '', me);
-        this.log(`shop: ${this._pub(me).name} gave ${betrag} coins to ${this._pub(ziel).name}`);
-        await this._shopMelden(ziel);
-        const w = await this.db.get('SELECT balance FROM wallets WHERE uuid = ?', [ziel]);
-        return { balance: Number(w.balance) };
-      });
+      })).then(async st => { await this._creatorAnteil(me, it.price, txId ? `${txId}_g` : null); return st; });
     }
   };
 
   return { methods, OPS };
 }
 
-module.exports = { factory, RARITIES, PREIS, STARTGUTHABEN, ADMINS_STANDARD };
+module.exports = { factory, RARITIES, PREIS, CATS, ITEM_ID, LIMITS, EINSTELLUNGEN, ADMINS_STANDARD, NAMETAG_IDS };

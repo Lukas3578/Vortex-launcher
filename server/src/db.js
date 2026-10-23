@@ -49,12 +49,38 @@ const SCHEMA = [
      id TEXT PRIMARY KEY, cat TEXT NOT NULL, name TEXT NOT NULL, price BIGINT NOT NULL, rarity TEXT NOT NULL,
      giftable INTEGER NOT NULL DEFAULT 1, limited INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1,
      deleted INTEGER NOT NULL DEFAULT 0, updated BIGINT NOT NULL DEFAULT 0)`,
-  `CREATE TABLE IF NOT EXISTS shop_admins (uuid TEXT PRIMARY KEY, name TEXT NOT NULL, created BIGINT NOT NULL)`
+  `CREATE TABLE IF NOT EXISTS shop_admins (uuid TEXT PRIMARY KEY, name TEXT NOT NULL, created BIGINT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS creators (
+     uuid TEXT PRIMARY KEY, status TEXT NOT NULL, code TEXT NOT NULL DEFAULT '', code_active INTEGER NOT NULL DEFAULT 1,
+     bio TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', applied BIGINT NOT NULL DEFAULT 0, accepted BIGINT NOT NULL DEFAULT 0,
+     updated BIGINT NOT NULL DEFAULT 0)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS creators_code ON creators (code) WHERE code <> ''`,
+  `CREATE TABLE IF NOT EXISTS creator_support (uuid TEXT PRIMARY KEY, creator TEXT NOT NULL, code TEXT NOT NULL, since BIGINT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS admin_log (
+     id TEXT PRIMARY KEY, admin TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '',
+     old_value TEXT NOT NULL DEFAULT '', new_value TEXT NOT NULL DEFAULT '', created BIGINT NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS admin_log_created ON admin_log (created)`,
+  `CREATE TABLE IF NOT EXISTS bans (uuid TEXT PRIMARY KEY, reason TEXT NOT NULL DEFAULT '', admin TEXT NOT NULL DEFAULT '', created BIGINT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS server_settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)`
+];
+
+/**
+ * Neue Spalten fuer Tabellen, die es schon gibt (seit 1.2). Jede Zeile wird einzeln versucht;
+ * gibt es die Spalte schon, schlaegt sie fehl und wird uebersprungen.
+ */
+const MIGRATE = [
+  `ALTER TABLE shop_items ADD COLUMN description TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE shop_items ADD COLUMN featured INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE shop_items ADD COLUMN creator_only INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE shop_items ADD COLUMN starts BIGINT NOT NULL DEFAULT 0`,
+  `ALTER TABLE shop_items ADD COLUMN ends BIGINT NOT NULL DEFAULT 0`,
+  `ALTER TABLE shop_items ADD COLUMN created BIGINT NOT NULL DEFAULT 0`
 ];
 
 const NUMERIC = new Set(['created', 'last_seen', 'since', 'favorite', 'muted', 'expires', 'last_msg', 'joined',
   'last_read', 'id', 'edited', 'deleted', 'reply_to', 'n', 'updated', 'image_banned',
-  'balance', 'earned', 'minutes', 'amount', 'price', 'giftable', 'limited', 'active']);
+  'balance', 'earned', 'minutes', 'amount', 'price', 'giftable', 'limited', 'active',
+  'featured', 'creator_only', 'starts', 'ends', 'code_active', 'applied', 'accepted', 'since', 'total']);
 
 /** Postgres liefert BIGINT als Text -- hier wieder Zahlen daraus machen. */
 function fixRow(row) {
@@ -81,6 +107,7 @@ async function open(env = process.env) {
       async close() { await pool.end(); }
     };
     for (const s of SCHEMA) await db.run(s);
+    for (const s of MIGRATE) { try { await db.run(s); } catch (_) { /* Spalte gibt es schon */ } }
     return db;
   }
   const { DatabaseSync } = require('node:sqlite');
@@ -90,6 +117,7 @@ async function open(env = process.env) {
   const sqlite = new DatabaseSync(file);
   sqlite.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
   for (const s of SCHEMA) sqlite.exec(s);
+  for (const s of MIGRATE) { try { sqlite.exec(s); } catch (_) { /* Spalte gibt es schon */ } }
   const cache = new Map();
   const stmt = sql => { let s = cache.get(sql); if (!s) { s = sqlite.prepare(sql); cache.set(sql, s); } return s; };
   const norm = params => params.map(p => (typeof p === 'boolean' ? (p ? 1 : 0) : p));

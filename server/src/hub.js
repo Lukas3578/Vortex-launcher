@@ -93,7 +93,13 @@ class Hub {
   constructor(db, { log = () => {}, banned = [], cosmeticAdmins = [], shopAdmins = [] } = {}) {
     this.db = db;
     this.shopAdminListe = shopAdmins;
-    this.log = log;
+    this.logPuffer = [];
+    this.log = (...teile) => {
+      const zeile = teile.map(t => (typeof t === 'string' ? t : t && t.message ? t.message : String(t))).join(' ');
+      this.logPuffer.push({ at: now(), text: zeile.slice(0, 300) });
+      if (this.logPuffer.length > 200) this.logPuffer.splice(0, this.logPuffer.length - 200);
+      log(...teile);
+    };
     this.banned = new Set(banned.map(s => String(s).toLowerCase()));
     this.cosmeticAdmins = new Set(cosmeticAdmins.map(s => String(s).toLowerCase()));
     this.lastImageUpload = new Map();
@@ -137,6 +143,8 @@ class Hub {
     const last = await db.get('SELECT MAX(id) AS n FROM messages');
     this.lastId = Number(last?.n) || 0;
     this.log(`Loaded ${this.users.size} user(s), ${this.convs.size} conversation(s).`);
+    await this._creatorsLaden();
+    await this._bansLaden();
     await this._shopLaden(this.shopAdminListe);
   }
 
@@ -165,7 +173,9 @@ class Hub {
       [u.uuid, u.name, u.created, u.lastSeen, JSON.stringify(u.settings), JSON.stringify(u.profile || {}), JSON.stringify(u.status)]);
   }
 
-  isBanned(uuid, name) { return this.banned.has(String(uuid).toLowerCase()) || this.banned.has(String(name).toLowerCase()); }
+  isBanned(uuid, name) {
+    return this.banned.has(String(uuid).toLowerCase()) || this.banned.has(String(name).toLowerCase()) || Boolean(this.bans?.has(String(uuid).toLowerCase()));
+  }
 
   /** Nach erfolgreicher Mojang-Pruefung: Nutzer anlegen/aktualisieren, Token ausstellen. */
   async login(uuid, name) {
@@ -893,11 +903,14 @@ Object.assign(OPS, {
     const players = {};
     for (const uuid of ids) {
       const row = await this.db.get('SELECT data, image_hash, image_banned FROM cosmetics WHERE uuid = ?', [uuid]);
-      if (!row) continue;
+      if (!row) {
+        if (this.users.has(uuid)) players[uuid] = { ...cosmetics.cleanSelection({}), image: null, badge: this._abzeichen(uuid) };
+        continue;
+      }
       const sel = cosmetics.cleanSelection(safeJson(row.data, {}));
       const zeigeBild = row.image_hash && !row.image_banned && !this.hasBlocked(me, uuid) && !this.hasBlocked(uuid, me);
       if (sel.cape === 'custom' && !zeigeBild) sel.cape = '';
-      players[uuid] = { ...sel, image: sel.cape === 'custom' ? row.image_hash : null };
+      players[uuid] = { ...sel, image: sel.cape === 'custom' ? row.image_hash : null, badge: this._abzeichen(uuid) };
     }
     return { players };
   },
@@ -1015,8 +1028,10 @@ Hub.prototype._broadcastUpdate = async function (convId, id, me) {
   return this._msgPub(row, me);
 };
 
-const shopTeile = require('./shop').factory({ fail, cleanText });
-Object.assign(Hub.prototype, shopTeile.methods);
-Object.assign(OPS, shopTeile.OPS);
+for (const teil of [require('./shop'), require('./creators'), require('./admin')]) {
+  const t = teil.factory({ fail, cleanText });
+  Object.assign(Hub.prototype, t.methods);
+  Object.assign(OPS, t.OPS);
+}
 
 module.exports = { Hub, UserError, mergeSettings, DEFAULTS, SCHEMA, LIMITS };

@@ -1,11 +1,12 @@
 {
- "note": "Start-Katalog des Shops (seit Friends-Server 1.1). Admins aendern Preise im Spiel; diese Datei fuellt nur fehlende Eintraege.",
+ "note": "Start-Katalog des Shops (seit Friends-Server 1.1, Pets und Creator-Items seit 1.2). Admins aendern danach Preise und Felder; diese Datei fuellt nur fehlende Eintraege.",
  "items": [
   {
    "id": "cape:anim_vortex",
    "cat": "cape",
    "name": "Vortex",
-   "rarity": "legendary"
+   "rarity": "legendary",
+   "featured": true
   },
   {
    "id": "cape:anim_end",
@@ -443,7 +444,8 @@
    "id": "back:angel_wings",
    "cat": "back",
    "name": "Angel Wings",
-   "rarity": "epic"
+   "rarity": "epic",
+   "featured": true
   },
   {
    "id": "back:demon_wings",
@@ -647,7 +649,8 @@
    "id": "aura:arcane_circle",
    "cat": "aura",
    "name": "Arcane Circle",
-   "rarity": "legendary"
+   "rarity": "legendary",
+   "featured": true
   },
   {
    "id": "aura:solar_crown",
@@ -785,7 +788,8 @@
    "id": "hat:crown",
    "cat": "hat",
    "name": "Royal Crown",
-   "rarity": "rare"
+   "rarity": "rare",
+   "featured": true
   },
   {
    "id": "hat:horns",
@@ -1104,6 +1108,61 @@
    "cat": "nametag",
    "name": "Glowing Name",
    "rarity": "rare"
+  },
+  {
+   "id": "pet:mini_dragon",
+   "cat": "pet",
+   "name": "Mini Dragon",
+   "rarity": "epic",
+   "featured": true,
+   "description": "A tiny dragon that flaps along beside you"
+  },
+  {
+   "id": "pet:bee",
+   "cat": "pet",
+   "name": "Busy Bee",
+   "rarity": "rare",
+   "featured": true,
+   "description": "Buzzes over your shoulder"
+  },
+  {
+   "id": "pet:slime",
+   "cat": "pet",
+   "name": "Slimey",
+   "rarity": "uncommon",
+   "description": "A bouncy little slime"
+  },
+  {
+   "id": "pet:ghost",
+   "cat": "pet",
+   "name": "Boo",
+   "rarity": "rare",
+   "description": "A friendly ghost that glows in the dark"
+  },
+  {
+   "id": "pet:penguin",
+   "cat": "pet",
+   "name": "Pebble the Penguin",
+   "rarity": "uncommon",
+   "description": "Waddles through the air"
+  },
+  {
+   "id": "pet:phoenix",
+   "cat": "pet",
+   "name": "Creator Phoenix",
+   "rarity": "mythic",
+   "price": 0,
+   "creatorOnly": true,
+   "description": "Only for Vortex Creators"
+  },
+  {
+   "id": "nametag:creator",
+   "cat": "nametag",
+   "name": "Creator Gold",
+   "rarity": "mythic",
+   "price": 0,
+   "creatorOnly": true,
+   "description": "A golden name, only for Vortex Creators"
   }
  ]
 }

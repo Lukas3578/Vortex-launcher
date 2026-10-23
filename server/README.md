@@ -72,6 +72,13 @@ an den Vortex Client weiter.
   Namen werden beim Start einmal bei Mojang in UUIDs umgewandelt und danach fest gespeichert – ein späterer
   Namenswechsel ändert also nichts an den Rechten; wer aus der Liste fliegt, verliert sie beim nächsten Start. Admins ändern im Spiel (Cosmetics → Admin) Preise,
   Seltenheit, Verschenkbar/Limitiert, nehmen Items aus dem Shop und geben Coins.
+- **Creator-Programm & Admin (seit 1.2.0):** Bewerbung läuft über Discord, den Status (pending, accepted,
+  rejected, suspended), Creator-Codes (eindeutig) und Creator-Items setzen nur Admins. Wer einen Code unterstützt,
+  bringt dem Creator bei jedem Kauf einen Anteil (Standard 5 %, zahlt der Server). Admins (`SHOP_ADMINS`) haben im
+  Launcher ein Admin-Panel und im Spiel ein Schnellmenü; jede Änderung braucht einen Grund und steht im Protokoll
+  (`admin_log`), das niemand ändern oder löschen kann. Sperren (`bans`), Einstellungen (`server_settings`: Coins pro
+  Minute, Start-Coins, Creator-Anteil, Wartezeit beim Code-Wechsel) liegen in der Datenbank. Neue Tabellen und
+  Spalten legt der Server beim Start selbst an.
 - **Status:** `GET /` zeigt, wie viele Spieler registriert und gerade verbunden sind.
 - Nachrichten älter als 180 Tage werden automatisch gelöscht.
 
