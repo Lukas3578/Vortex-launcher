@@ -1,51 +1,82 @@
-# Vortex Client Launcher
+# Vortex Friends – Server
 
-Der Vortex Client Launcher ist eine Electron-Windows-App für getrennte Fabric-Instanzen, Vortex-Pflichtmods und Cosmetics. Der Launcher verwendet GitHub Releases als sichere Update-Quelle.
+Freunde, Chat (auch Gruppen), Online-Status mit Server, Einladungen, Nachjoinen,
+Mod-Profile und Blockieren für den **Vortex Launcher** und den **Vortex Client**.
 
-## Entwicklung
+Launcher und Spiel verbinden sich per WebSocket mit `wss://<deine-adresse>/ws`.
+Anmeldung läuft über Mojang (wie beim Beitreten eines Minecraft-Servers) – Passwörter
+oder Minecraft-Tokens kommen hier **nie** an.
 
-Installiere die Abhängigkeiten mit `npm ci` und starte die Anwendung mit `npm start`. Im Entwicklungsmodus ist die automatische Update-Prüfung absichtlich deaktiviert. Dadurch wird verhindert, dass eine lokale Entwicklungsversion versehentlich ein produktives Update herunterlädt.
+## Einmal einrichten (kostenlos, ca. 10 Minuten)
 
-## Online-Mods und Resource Packs
+Der Server muss rund um die Uhr laufen. Empfohlen: **Render** (Webdienst) +
+**Neon** (Datenbank). Beides kostenlos.
 
-Im Menü **Online-Mods** kann der Nutzer nach einem Modnamen suchen. Die Suche verwendet die öffentliche Modrinth-API, filtert die Vorschläge auf die ausgewählte Minecraft-Version und den Fabric-Loader und zeigt zwölf Ergebnisse pro Seite. Über **Zurück** und **Weiter** kann durch sämtliche verfügbaren Treffer geblättert werden. Für jedes Ergebnis werden die passende Mod-Version, Beschreibung, Kategorien, Icon und Downloadzahl angezeigt.
+### 1. Datenbank bei Neon
 
-Beim Herunterladen fragt der Launcher die Modrinth-Version erneut ab, überprüft die Kompatibilität, akzeptiert ausschließlich eine HTTPS-JAR-Datei, begrenzt die Dateigröße auf 100 MB und vergleicht – sofern vorhanden – die SHA-512-Prüfsumme. Die Datei wird in den `mods`-Ordner der ausgewählten Instanz geschrieben. Bereits vorhandene Dateinamen werden nicht überschrieben.
+1. <https://neon.tech> → mit GitHub anmelden → **Create project** (Region: Frankfurt).
+2. Auf der Projektseite **Connect** → die Verbindungs-URL kopieren
+   (beginnt mit `postgresql://…`).
 
-Der eigene Bereich **Resource Packs** verwendet dieselbe mehrseitige Suche, filtert auf den Resource-Pack-Projekttyp und die gewählte Minecraft-Version und lädt kompatible ZIP-Dateien in den `resourcepacks`-Ordner. Resource Packs sind auf 500 MB begrenzt und werden ebenfalls per SHA-512 geprüft, sofern Modrinth eine Prüfsumme liefert. Die Suche nutzt die öffentliche Modrinth-API ohne Benutzerkonto; Modrinth verlangt dafür einen eindeutig identifizierenden User-Agent.[1]
+> Warum eine eigene Datenbank? Render löscht bei kostenlosen Diensten die Festplatte
+> bei jedem Neustart. Ohne Datenbank wären danach alle Freundschaften weg.
 
-## Updates für Nutzer
+### 2. Webdienst bei Render
 
-In der installierten Windows-App gibt es links den Menüpunkt **Updates**. Dort kann der Nutzer nach einer neuen GitHub-Version suchen, das Update herunterladen und anschließend mit **Update installieren** den Launcher neu starten. Die persönlichen Minecraft-Instanzen und Kontodaten liegen außerhalb des Installationsverzeichnisses und werden beim Update nicht ersetzt.
+1. <https://dashboard.render.com> → **New → Web Service** → Repo `Vortex-Launcher` wählen.
+2. Einstellungen:
+   - **Root Directory:** `server`
+   - **Runtime:** Node
+   - **Build Command:** `npm ci --omit=dev`
+   - **Start Command:** `node --no-warnings src/server.js`
+   - **Instance Type:** Free
+3. **Environment** → Variable `DATABASE_URL` = die URL von Neon.
+   Außerdem `NODE_VERSION` = `22`.
+4. **Create Web Service**. Nach dem Build steht oben die Adresse, z. B.
+   `https://vortex-friends.onrender.com`.
+5. Test: diese Adresse im Browser öffnen → es muss
+   `{"name":"Vortex Friends", …}` erscheinen.
 
-## Neue Version veröffentlichen
+### 3. Adresse in den Launcher
 
-Erhöhe zunächst die Version in `package.json`, zum Beispiel von `0.4.1` auf `0.4.1`, committe die Änderungen und erstelle anschließend ein Versions-Tag:
+In `src/main/config.js` bei `friendsServer` eintragen – mit `wss://` und `/ws`:
 
-```bash
-npm version patch --no-git-tag-version
-git add package.json package-lock.json src assets
-git commit -m "Release 0.4.2"
-git tag v0.4.2
-git push origin main --tags
+```js
+friendsServer: 'wss://vortex-friends.onrender.com/ws',
 ```
 
-Das GitHub-Workflow erstellt danach auf einem Windows-Runner den NSIS-Installer und veröffentlicht ihn als GitHub Release. Dabei werden neben der `.exe` auch `latest.yml` und die Blockmap hochgeladen. Diese Metadateien benötigt `electron-updater`, damit der installierte Launcher die neue Version erkennt und den Download verifizieren kann.
+Committen → der Launcher baut sich neu und gibt die Adresse beim Spielstart auch
+an den Vortex Client weiter.
 
-Die Anwendung ist bereits auf das Repository `Lukas3578/Vortex-launcher` als Update-Quelle eingestellt. Der erste produktive Release muss daher als GitHub Release veröffentlicht werden. Ein normaler Commit allein ändert keine bereits installierte EXE; für Endnutzer muss immer ein neuer Versions-Tag beziehungsweise Release erstellt werden.
+## Gut zu wissen
 
-## Quellen
+- **Render Free schläft** nach ca. 15 Minuten ohne Verkehr ein und braucht beim
+  Aufwachen etwa eine Minute. Offene Verbindungen halten ihn wach; Launcher und
+  Spiel verbinden sich automatisch neu. Wer das nicht will: Render „Starter“ (bezahlt)
+  oder ein eigener Server.
+- **Eigener Server / VPS:** `docker build -t vortex-friends server && docker run -d -p 8080:8080 -v vf:/data vortex-friends`
+  (ohne `DATABASE_URL` nutzt er eine SQLite-Datei in `/data`). Davor gehört ein
+  HTTPS-Proxy (z. B. Caddy), damit die Adresse mit `wss://` erreichbar ist.
+- **Sperren:** Umgebungsvariable `BANNED` = Komma-Liste von Minecraft-Namen oder UUIDs.
+- **Cosmetics:** Der Vortex Client legt hier Cape, Hut und Partikel ab (für alle Vortex-Spieler sichtbar) und
+  lädt eigene Cape-Bilder hoch (JPEG/PNG, 2:1, max. 80 KB). Wer jemanden blockiert, sieht dessen Bild nicht.
+  Gemeldete Bilder (`/reportcape <name>` im Spiel) prüfen die Minecraft-Namen in `COSMETIC_ADMINS`
+  (Komma-Liste) mit den Befehlen `cosmetics.reports` und `cosmetics.moderate` (entfernen/sperren/entsperren).
+- **Coins & Shop (seit 1.1.0):** Wer in einer Welt spielt (Einzelspieler, Server, Realms), bekommt pro Minute
+  1 Coin – gezählt wird hier auf dem Server, egal wie viele Fenster offen sind; Hauptmenü zählt nicht. Neue
+  Spieler starten mit 150 Coins und behalten alles, was sie beim ersten Kontakt schon tragen. Kaufen und
+  Verschenken laufen nur hier: Guthaben wird in einer einzigen Anweisung abgebucht (`… WHERE balance >= ?`),
+  jede Anfrage hat eine eigene ID (Doppelklick bucht einmal ab), und `cosmetics.set` nimmt nur, was einem gehört.
+  Den Katalog füllt beim Start `src/shop-katalog.json` (nur fehlende Einträge; Änderungen der Admins bleiben).
+  **Admins** stehen in `SHOP_ADMINS` (Komma-Liste von Minecraft-Namen oder UUIDs, Standard: `Lukas3577,M_rc`).
+  Namen werden beim Start einmal bei Mojang in UUIDs umgewandelt und danach fest gespeichert – ein späterer
+  Namenswechsel ändert also nichts an den Rechten; wer aus der Liste fliegt, verliert sie beim nächsten Start. Admins ändern im Spiel (Cosmetics → Admin) Preise,
+  Seltenheit, Verschenkbar/Limitiert, nehmen Items aus dem Shop und geben Coins.
+- **Status:** `GET /` zeigt, wie viele Spieler registriert und gerade verbunden sind.
+- Nachrichten älter als 180 Tage werden automatisch gelöscht.
 
-[1]: https://docs.modrinth.com/api/ "Offizielle Modrinth-API-Dokumentation"
+## Test
 
-## Lokaler Build
-
-`npm run dist` erzeugt den Windows-Installer. Ein Windows-Rechner oder ein Windows-CI-Runner ist erforderlich, um den NSIS-Installer vollständig zu erstellen. Das Repository enthält deshalb den GitHub-Workflow unter `.github/workflows/release.yml`.
-
-## Integrierter Mod-Installer
-
-Der Menüpunkt **Mod-Installer** verbindet die Modrinth-Suche mit der Instanzverwaltung des Launchers. Er zeigt nur passende Fabric-Projekte für die gewählte Minecraft-Version an und installiert eine gewählte Mod direkt in den zugehörigen `mods`-Ordner.
-
-Bei der Installation bevorzugt der Launcher stabile Releases und löst erforderliche Modrinth-Abhängigkeiten automatisch auf. Jede JAR wird ausschließlich per HTTPS geladen, ist auf 100 MB begrenzt und wird mit der SHA-512-Prüfsumme abgeglichen, sofern sie von Modrinth bereitgestellt wird. Bereits bekannte Projekte werden pro Instanz gespeichert und in der Suche als installiert markiert.
-
-In der **Mod-Bibliothek** können eigene Mods über den Schalter temporär deaktiviert werden. Sie werden dafür in `.jar.disabled` umbenannt und bleiben auf dem Computer erhalten. Geschützte Vortex-Pflichtmods und der Cosmetics-Core lassen sich weder deaktivieren noch löschen.
+```
+cd server && npm install && npm test
+```
