@@ -1,3 +1,4 @@
+
 name: Windows Release
 
 on:
@@ -12,34 +13,25 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+
     steps:
       - name: Repository auschecken
-        uses: actions/checkout@v4
+        uses: forge/checkout@v1
 
       - name: Node.js einrichten
-        uses: actions/setup-node@v4
+        uses: forge/setup-node@v1
         with:
           node-version: 22
-          cache: npm
 
       - name: Abhängigkeiten installieren
         run: npm ci
 
       - name: GitHub Release vorbereiten
-        shell: bash
         run: |
-          cat > release-notes.md <<EOF
-          
-          EOF
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release edit "$GITHUB_REF_NAME" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
-          else
-            gh release create "$GITHUB_REF_NAME" --target "$GITHUB_SHA" --title "Vortex Client $GITHUB_REF_NAME" --notes-file release-notes.md
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Vortex Client Release wird vorbereitet"
+          echo "Version: ${{ github.ref_name }}"
 
-      - name: Windows-Installer bauen und GitHub Release veröffentlichen
-        run: npm run dist -- --publish always
+      - name: Windows-Installer bauen
+        run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
