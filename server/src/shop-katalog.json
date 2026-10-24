@@ -1,0 +1,1190 @@
+{
+ "note": "Start-Katalog des Shops (seit Friends-Server 1.1, Pets und Creator-Items seit 1.2). Admins aendern danach Preise und Felder; diese Datei fuellt nur fehlende Eintraege.",
+ "items": [
+  {
+   "id": "cape:anim_vortex",
+   "cat": "cape",
+   "name": "Vortex",
+   "rarity": "legendary",
+   "featured": true
+  },
+  {
+   "id": "cape:anim_end",
+   "cat": "cape",
+   "name": "Nebula",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_nether",
+   "cat": "cape",
+   "name": "Inferno",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_aurora",
+   "cat": "cape",
+   "name": "Aurora",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_ocean",
+   "cat": "cape",
+   "name": "Abyss",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_frost",
+   "cat": "cape",
+   "name": "Frostbite",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_storm",
+   "cat": "cape",
+   "name": "Thunder",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_neon",
+   "cat": "cape",
+   "name": "Synthwave",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_prism",
+   "cat": "cape",
+   "name": "Hologram",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_sakura",
+   "cat": "cape",
+   "name": "Sakura",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_royal",
+   "cat": "cape",
+   "name": "Midas",
+   "rarity": "legendary"
+  },
+  {
+   "id": "cape:anim_phantom",
+   "cat": "cape",
+   "name": "Phantom",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_toxic",
+   "cat": "cape",
+   "name": "Toxic",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_carbon",
+   "cat": "cape",
+   "name": "Carbon",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_eclipse",
+   "cat": "cape",
+   "name": "Eclipse",
+   "rarity": "legendary"
+  },
+  {
+   "id": "cape:anim_circuit",
+   "cat": "cape",
+   "name": "Circuit",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_neon_lightning",
+   "cat": "cape",
+   "name": "Neon Lightning",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_plasma",
+   "cat": "cape",
+   "name": "Plasma",
+   "rarity": "legendary"
+  },
+  {
+   "id": "cape:anim_vortex_sigil",
+   "cat": "cape",
+   "name": "Vortex Sigil",
+   "rarity": "mythic"
+  },
+  {
+   "id": "cape:anim_rift",
+   "cat": "cape",
+   "name": "Void Rift",
+   "rarity": "legendary"
+  },
+  {
+   "id": "cape:anim_lava",
+   "cat": "cape",
+   "name": "Lava Lamp",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_coderain",
+   "cat": "cape",
+   "name": "Code Rain",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_sunset",
+   "cat": "cape",
+   "name": "Golden Hour",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_spectrum",
+   "cat": "cape",
+   "name": "Spectrum",
+   "rarity": "epic"
+  },
+  {
+   "id": "cape:anim_starfall",
+   "cat": "cape",
+   "name": "Starfall",
+   "rarity": "legendary"
+  },
+  {
+   "id": "bandana:lightning",
+   "cat": "bandana",
+   "name": "Lightning",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:flame",
+   "cat": "bandana",
+   "name": "Flame",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:rainbow",
+   "cat": "bandana",
+   "name": "Rainbow",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:camo",
+   "cat": "bandana",
+   "name": "Camo",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:galaxy",
+   "cat": "bandana",
+   "name": "Galaxy",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "bandana:vortex",
+   "cat": "bandana",
+   "name": "Vortex",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "bandana:racing",
+   "cat": "bandana",
+   "name": "Racing",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:sakura",
+   "cat": "bandana",
+   "name": "Sakura",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:ice",
+   "cat": "bandana",
+   "name": "Ice",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:toxic",
+   "cat": "bandana",
+   "name": "Toxic",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:neon",
+   "cat": "bandana",
+   "name": "Neon",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "bandana:lava",
+   "cat": "bandana",
+   "name": "Lava",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "bandana:ocean",
+   "cat": "bandana",
+   "name": "Ocean",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:tiger",
+   "cat": "bandana",
+   "name": "Tiger",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:urban_camo",
+   "cat": "bandana",
+   "name": "Urban Camo",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:classic",
+   "cat": "bandana",
+   "name": "Classic",
+   "rarity": "common"
+  },
+  {
+   "id": "bandana:gold_lux",
+   "cat": "bandana",
+   "name": "Gold Lux",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "bandana:hearts",
+   "cat": "bandana",
+   "name": "Hearts",
+   "rarity": "common"
+  },
+  {
+   "id": "face:pixel_shades",
+   "cat": "face",
+   "name": "Pixel Shades",
+   "rarity": "common"
+  },
+  {
+   "id": "face:heart_glasses",
+   "cat": "face",
+   "name": "Heart Glasses",
+   "rarity": "common"
+  },
+  {
+   "id": "face:neon_visor",
+   "cat": "face",
+   "name": "Neon Visor",
+   "rarity": "rare"
+  },
+  {
+   "id": "face:star_glasses",
+   "cat": "face",
+   "name": "Star Glasses",
+   "rarity": "common"
+  },
+  {
+   "id": "face:retro_3d",
+   "cat": "face",
+   "name": "3D Glasses",
+   "rarity": "common"
+  },
+  {
+   "id": "face:monocle",
+   "cat": "face",
+   "name": "Monocle",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:skull_mask",
+   "cat": "face",
+   "name": "Skull Mask",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:ninja_mask",
+   "cat": "face",
+   "name": "Ninja Mask",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:fox_mask",
+   "cat": "face",
+   "name": "Fox Mask",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:bow",
+   "cat": "face",
+   "name": "Bow",
+   "rarity": "common"
+  },
+  {
+   "id": "face:aviators",
+   "cat": "face",
+   "name": "Aviators",
+   "rarity": "common"
+  },
+  {
+   "id": "face:eye_patch",
+   "cat": "face",
+   "name": "Eye Patch",
+   "rarity": "common"
+  },
+  {
+   "id": "face:shutter_shades",
+   "cat": "face",
+   "name": "Shutter Shades",
+   "rarity": "common"
+  },
+  {
+   "id": "face:ski_goggles",
+   "cat": "face",
+   "name": "Ski Goggles",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:round_glasses",
+   "cat": "face",
+   "name": "Round Glasses",
+   "rarity": "common"
+  },
+  {
+   "id": "face:masquerade",
+   "cat": "face",
+   "name": "Masquerade",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "face:cyber_eye",
+   "cat": "face",
+   "name": "Cyber Eye",
+   "rarity": "rare"
+  },
+  {
+   "id": "face:gold_grill",
+   "cat": "face",
+   "name": "Gold Grill",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:teddy_backpack",
+   "cat": "back",
+   "name": "Teddy Backpack",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:explorer_pack",
+   "cat": "back",
+   "name": "Explorer Backpack",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:greatsword",
+   "cat": "back",
+   "name": "Greatsword",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:crystal_scythe",
+   "cat": "back",
+   "name": "Crystal Scythe",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:guitar",
+   "cat": "back",
+   "name": "Guitar",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:katana",
+   "cat": "back",
+   "name": "Katana",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:surfboard",
+   "cat": "back",
+   "name": "Surfboard",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:rocket_pack",
+   "cat": "back",
+   "name": "Rocket Pack",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:quiver",
+   "cat": "back",
+   "name": "Quiver",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:cyber_pack",
+   "cat": "back",
+   "name": "Cyber Pack",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:battle_axe",
+   "cat": "back",
+   "name": "Battle Axe",
+   "rarity": "rare"
+  },
+  {
+   "id": "back:skateboard",
+   "cat": "back",
+   "name": "Skateboard",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "back:angel_wings",
+   "cat": "back",
+   "name": "Angel Wings",
+   "rarity": "epic",
+   "featured": true
+  },
+  {
+   "id": "back:demon_wings",
+   "cat": "back",
+   "name": "Demon Wings",
+   "rarity": "epic"
+  },
+  {
+   "id": "back:dragon_wings",
+   "cat": "back",
+   "name": "Dragon Wings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "back:phoenix_wings",
+   "cat": "back",
+   "name": "Phoenix Wings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "back:vortex_wings",
+   "cat": "back",
+   "name": "Vortex Wings",
+   "rarity": "mythic"
+  },
+  {
+   "id": "back:frost_wings",
+   "cat": "back",
+   "name": "Frost Wings",
+   "rarity": "epic"
+  },
+  {
+   "id": "back:shadow_wings",
+   "cat": "back",
+   "name": "Shadow Wings",
+   "rarity": "epic"
+  },
+  {
+   "id": "back:butterfly_wings",
+   "cat": "back",
+   "name": "Butterfly Wings",
+   "rarity": "epic"
+  },
+  {
+   "id": "back:golden_wings",
+   "cat": "back",
+   "name": "Golden Wings",
+   "rarity": "legendary"
+  },
+  {
+   "id": "back:neon_wings",
+   "cat": "back",
+   "name": "Neon Wings",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:sakura",
+   "cat": "aura",
+   "name": "Sakura Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:snow",
+   "cat": "aura",
+   "name": "Snow Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:autumn",
+   "cat": "aura",
+   "name": "Autumn Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:butterfly",
+   "cat": "aura",
+   "name": "Butterfly Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:flame",
+   "cat": "aura",
+   "name": "Flame Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:soul",
+   "cat": "aura",
+   "name": "Soul Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:yin_yang",
+   "cat": "aura",
+   "name": "Yin-Yang Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:neon_rings",
+   "cat": "aura",
+   "name": "Neon Rings",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:hearts",
+   "cat": "aura",
+   "name": "Heart Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:stars",
+   "cat": "aura",
+   "name": "Star Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:music",
+   "cat": "aura",
+   "name": "Music Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:lightning",
+   "cat": "aura",
+   "name": "Lightning Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:bubbles",
+   "cat": "aura",
+   "name": "Bubble Aura",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "aura:emerald",
+   "cat": "aura",
+   "name": "Emerald Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:galaxy",
+   "cat": "aura",
+   "name": "Galaxy Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:halo",
+   "cat": "aura",
+   "name": "Halo",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:tornado",
+   "cat": "aura",
+   "name": "Tornado Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:fireflies",
+   "cat": "aura",
+   "name": "Firefly Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:atom",
+   "cat": "aura",
+   "name": "Atom Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:rain_cloud",
+   "cat": "aura",
+   "name": "Rain Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:embers",
+   "cat": "aura",
+   "name": "Ember Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:void",
+   "cat": "aura",
+   "name": "Void Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:gold_coins",
+   "cat": "aura",
+   "name": "Coin Aura",
+   "rarity": "epic"
+  },
+  {
+   "id": "aura:ice",
+   "cat": "aura",
+   "name": "Ice Aura",
+   "rarity": "rare"
+  },
+  {
+   "id": "aura:arcane_circle",
+   "cat": "aura",
+   "name": "Arcane Circle",
+   "rarity": "legendary",
+   "featured": true
+  },
+  {
+   "id": "aura:solar_crown",
+   "cat": "aura",
+   "name": "Solar Crown",
+   "rarity": "legendary"
+  },
+  {
+   "id": "aura:void_vortex",
+   "cat": "aura",
+   "name": "Void Vortex",
+   "rarity": "mythic"
+  },
+  {
+   "id": "aura:frost_nova",
+   "cat": "aura",
+   "name": "Frost Nova",
+   "rarity": "legendary"
+  },
+  {
+   "id": "aura:inferno_ring",
+   "cat": "aura",
+   "name": "Inferno Ring",
+   "rarity": "legendary"
+  },
+  {
+   "id": "aura:aurora_veil",
+   "cat": "aura",
+   "name": "Aurora Veil",
+   "rarity": "legendary"
+  },
+  {
+   "id": "shield:obsidian",
+   "cat": "shield",
+   "name": "Obsidian Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:ender",
+   "cat": "shield",
+   "name": "Ender Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:nether_portal",
+   "cat": "shield",
+   "name": "Portal Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:frost",
+   "cat": "shield",
+   "name": "Frost Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:sunflower",
+   "cat": "shield",
+   "name": "Sunflower Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:sakura",
+   "cat": "shield",
+   "name": "Sakura Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:vortex",
+   "cat": "shield",
+   "name": "Vortex Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:lava",
+   "cat": "shield",
+   "name": "Lava Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:prism",
+   "cat": "shield",
+   "name": "Prism Shield",
+   "rarity": "epic"
+  },
+  {
+   "id": "shield:royal",
+   "cat": "shield",
+   "name": "Royal Shield",
+   "rarity": "epic"
+  },
+  {
+   "id": "shield:galaxy",
+   "cat": "shield",
+   "name": "Galaxy Shield",
+   "rarity": "epic"
+  },
+  {
+   "id": "shield:carbon",
+   "cat": "shield",
+   "name": "Carbon Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:dragon",
+   "cat": "shield",
+   "name": "Dragon Shield",
+   "rarity": "epic"
+  },
+  {
+   "id": "shield:circuit",
+   "cat": "shield",
+   "name": "Circuit Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:toxic",
+   "cat": "shield",
+   "name": "Toxic Shield",
+   "rarity": "rare"
+  },
+  {
+   "id": "shield:abyss",
+   "cat": "shield",
+   "name": "Abyss Shield",
+   "rarity": "epic"
+  },
+  {
+   "id": "hat:halo",
+   "cat": "hat",
+   "name": "Halo",
+   "rarity": "rare"
+  },
+  {
+   "id": "hat:crown",
+   "cat": "hat",
+   "name": "Royal Crown",
+   "rarity": "rare",
+   "featured": true
+  },
+  {
+   "id": "hat:horns",
+   "cat": "hat",
+   "name": "Demon Horns",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:orbit",
+   "cat": "hat",
+   "name": "Orbit",
+   "rarity": "epic"
+  },
+  {
+   "id": "hat:crystals",
+   "cat": "hat",
+   "name": "Crystal Crown",
+   "rarity": "epic"
+  },
+  {
+   "id": "hat:headphones",
+   "cat": "hat",
+   "name": "Neon Headphones",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:fox_ears",
+   "cat": "hat",
+   "name": "Fox Ears",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:flame",
+   "cat": "hat",
+   "name": "Flame Crown",
+   "rarity": "rare"
+  },
+  {
+   "id": "hat:witch_hat",
+   "cat": "hat",
+   "name": "Witch Hat",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:top_hat",
+   "cat": "hat",
+   "name": "Top Hat",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:cowboy_hat",
+   "cat": "hat",
+   "name": "Cowboy Hat",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:propeller_cap",
+   "cat": "hat",
+   "name": "Propeller Cap",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:viking_helmet",
+   "cat": "hat",
+   "name": "Viking Helmet",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:santa_hat",
+   "cat": "hat",
+   "name": "Santa Hat",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:party_hat",
+   "cat": "hat",
+   "name": "Party Hat",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:cat_ears",
+   "cat": "hat",
+   "name": "Cat Ears",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:bunny_ears",
+   "cat": "hat",
+   "name": "Bunny Ears",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:mushroom_hat",
+   "cat": "hat",
+   "name": "Mushroom Hat",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:snapback",
+   "cat": "hat",
+   "name": "Snapback",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:beanie",
+   "cat": "hat",
+   "name": "Beanie",
+   "rarity": "common"
+  },
+  {
+   "id": "hat:pirate_hat",
+   "cat": "hat",
+   "name": "Pirate Hat",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "hat:frost_crown",
+   "cat": "hat",
+   "name": "Frost Crown",
+   "rarity": "epic"
+  },
+  {
+   "id": "hat:bucket_hat",
+   "cat": "hat",
+   "name": "Bucket Hat",
+   "rarity": "common"
+  },
+  {
+   "id": "neck:gold_chain",
+   "cat": "neck",
+   "name": "Gold Chain",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:silver_chain",
+   "cat": "neck",
+   "name": "Silver Chain",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:iced_cuban",
+   "cat": "neck",
+   "name": "Iced Cuban",
+   "rarity": "rare"
+  },
+  {
+   "id": "neck:diamond_pendant",
+   "cat": "neck",
+   "name": "Diamond Pendant",
+   "rarity": "rare"
+  },
+  {
+   "id": "neck:vortex_pendant",
+   "cat": "neck",
+   "name": "Vortex Pendant",
+   "rarity": "rare"
+  },
+  {
+   "id": "neck:heart_locket",
+   "cat": "neck",
+   "name": "Heart Locket",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:pearl_necklace",
+   "cat": "neck",
+   "name": "Pearl Necklace",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:dog_tags",
+   "cat": "neck",
+   "name": "Dog Tags",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:moon_charm",
+   "cat": "neck",
+   "name": "Moon Charm",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:skull_chain",
+   "cat": "neck",
+   "name": "Skull Chain",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:fire_opal",
+   "cat": "neck",
+   "name": "Fire Opal",
+   "rarity": "rare"
+  },
+  {
+   "id": "neck:emerald_amulet",
+   "cat": "neck",
+   "name": "Emerald Amulet",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:event_horizon",
+   "cat": "neck",
+   "name": "Event Horizon",
+   "rarity": "legendary"
+  },
+  {
+   "id": "neck:star_charm",
+   "cat": "neck",
+   "name": "Star Charm",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "neck:sun_medallion",
+   "cat": "neck",
+   "name": "Sun Medallion",
+   "rarity": "rare"
+  },
+  {
+   "id": "neck:thunder_bolt",
+   "cat": "neck",
+   "name": "Thunder Bolt",
+   "rarity": "rare"
+  },
+  {
+   "id": "nametag:shaking",
+   "cat": "nametag",
+   "name": "Shaking Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:waving",
+   "cat": "nametag",
+   "name": "Waving Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:iterating",
+   "cat": "nametag",
+   "name": "Iterating Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:flipping",
+   "cat": "nametag",
+   "name": "Flipping Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:skewing",
+   "cat": "nametag",
+   "name": "Skewing Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:growing",
+   "cat": "nametag",
+   "name": "Growing Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:gradient",
+   "cat": "nametag",
+   "name": "Gradient Name",
+   "rarity": "rare"
+  },
+  {
+   "id": "nametag:rainbow",
+   "cat": "nametag",
+   "name": "Rainbow Name",
+   "rarity": "epic"
+  },
+  {
+   "id": "nametag:metallic",
+   "cat": "nametag",
+   "name": "Metallic Name",
+   "rarity": "rare"
+  },
+  {
+   "id": "nametag:fade",
+   "cat": "nametag",
+   "name": "Fade Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:shimmer",
+   "cat": "nametag",
+   "name": "Shimmer Name",
+   "rarity": "rare"
+  },
+  {
+   "id": "nametag:blinking",
+   "cat": "nametag",
+   "name": "Blinking Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:chromatic",
+   "cat": "nametag",
+   "name": "Chromatic Name",
+   "rarity": "epic"
+  },
+  {
+   "id": "nametag:fire",
+   "cat": "nametag",
+   "name": "Fire Name",
+   "rarity": "epic"
+  },
+  {
+   "id": "nametag:outline",
+   "cat": "nametag",
+   "name": "Outline Name",
+   "rarity": "uncommon"
+  },
+  {
+   "id": "nametag:glowing",
+   "cat": "nametag",
+   "name": "Glowing Name",
+   "rarity": "rare"
+  },
+  {
+   "id": "pet:mini_dragon",
+   "cat": "pet",
+   "name": "Mini Dragon",
+   "rarity": "epic",
+   "featured": true,
+   "description": "A tiny dragon that flaps along beside you"
+  },
+  {
+   "id": "pet:bee",
+   "cat": "pet",
+   "name": "Busy Bee",
+   "rarity": "rare",
+   "featured": true,
+   "description": "Buzzes over your shoulder"
+  },
+  {
+   "id": "pet:slime",
+   "cat": "pet",
+   "name": "Slimey",
+   "rarity": "uncommon",
+   "description": "A bouncy slime that hops beside you"
+  },
+  {
+   "id": "pet:ghost",
+   "cat": "pet",
+   "name": "Boo",
+   "rarity": "rare",
+   "description": "A friendly ghost that glows in the dark"
+  },
+  {
+   "id": "pet:penguin",
+   "cat": "pet",
+   "name": "Pebble the Penguin",
+   "rarity": "uncommon",
+   "description": "Waddles along right next to you"
+  },
+  {
+   "id": "pet:fox",
+   "cat": "pet",
+   "name": "Fox Kit",
+   "rarity": "epic",
+   "featured": true,
+   "description": "A little fox that trots along at your feet"
+  },
+  {
+   "id": "pet:cat",
+   "cat": "pet",
+   "name": "Kitty",
+   "rarity": "rare",
+   "description": "A curious kitten that follows you everywhere"
+  },
+  {
+   "id": "pet:pup",
+   "cat": "pet",
+   "name": "Golden Pup",
+   "rarity": "epic",
+   "description": "A happy puppy that wags its tail"
+  },
+  {
+   "id": "pet:phoenix",
+   "cat": "pet",
+   "name": "Creator Phoenix",
+   "rarity": "mythic",
+   "price": 0,
+   "creatorOnly": true,
+   "description": "Only for Vortex Creators"
+  },
+  {
+   "id": "nametag:creator",
+   "cat": "nametag",
+   "name": "Creator Gold",
+   "rarity": "mythic",
+   "price": 0,
+   "creatorOnly": true,
+   "description": "A golden name, only for Vortex Creators"
+  }
+ ]
+}

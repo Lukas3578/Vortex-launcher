@@ -1,59 +1,18 @@
 {
-  "name": "vortex-launcher",
-  "version": "1.0.37",
-  "description": "Vortex Launcher with isolated Fabric instances",
-  "main": "src/main.js",
-  "author": "Vortex Client",
-  "license": "MIT",
+  "name": "vortex-friends-server",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Freunde, Chat, Einladungen und Online-Status fuer den Vortex Client und Launcher.",
+  "main": "src/server.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron .",
-    "dist": "electron-builder --win"
+    "start": "node --no-warnings src/server.js",
+    "test": "node test/test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
   },
   "dependencies": {
-    "electron-updater": "^6.8.9",
-    "jszip": "^3.10.1",
-    "minecraft-launcher-core": "^3.18.2",
-    "msmc": "^5.0.5",
-    "pngjs": "^7.0.0"
-  },
-  "devDependencies": {
-    "electron": "^37.2.6",
-    "electron-builder": "^26.0.12"
-  },
-  "build": {
-    "appId": "com.vortexclient.launcher",
-    "productName": "Vortex Client",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "src/**/*",
-      "assets/**/*",
-      "package.json"
-    ],
-    "publish": {
-      "provider": "github",
-      "owner": "Lukas3578",
-      "repo": "Vortex-launcher",
-      "releaseType": "release"
-    },
-    "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowElevation": false,
-      "language": "1031",
-      "installerIcon": "assets/icon.ico",
-      "installerHeaderIcon": "assets/icon.ico",
-      "uninstallerIcon": "assets/icon.ico",
-      "runAfterFinish": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Vortex Client"
-    }
+    "pg": "^8.13.0",
+    "ws": "^8.18.0"
   }
 }
