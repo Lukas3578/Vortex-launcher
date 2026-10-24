@@ -1130,7 +1130,7 @@
    "cat": "pet",
    "name": "Slimey",
    "rarity": "uncommon",
-   "description": "A bouncy little slime"
+   "description": "A bouncy slime that hops beside you"
   },
   {
    "id": "pet:ghost",
@@ -1144,7 +1144,29 @@
    "cat": "pet",
    "name": "Pebble the Penguin",
    "rarity": "uncommon",
-   "description": "Waddles through the air"
+   "description": "Waddles along right next to you"
+  },
+  {
+   "id": "pet:fox",
+   "cat": "pet",
+   "name": "Fox Kit",
+   "rarity": "epic",
+   "featured": true,
+   "description": "A little fox that trots along at your feet"
+  },
+  {
+   "id": "pet:cat",
+   "cat": "pet",
+   "name": "Kitty",
+   "rarity": "rare",
+   "description": "A curious kitten that follows you everywhere"
+  },
+  {
+   "id": "pet:pup",
+   "cat": "pet",
+   "name": "Golden Pup",
+   "rarity": "epic",
+   "description": "A happy puppy that wags its tail"
   },
   {
    "id": "pet:phoenix",
